@@ -1,6 +1,8 @@
 package com.dccbigfred.android.ui.webview
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -32,6 +34,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
  * We wire [WebView.onResume]/[WebView.resumeTimers] to [Lifecycle.Event.ON_RESUME]
  * and only pause on [Lifecycle.Event.ON_STOP], so a brief loss of window focus
  * (notification shade, drawer) does not freeze JS timers.
+ *
+ * Chromium throttles `setInterval` on page *visibility*, not input focus. A
+ * Compose overlay / drawer scrim can flip window visibility to INVISIBLE and
+ * stall keepalive — [KeepAliveWebView] reports VISIBLE while the Activity is
+ * resumed so the page stays `document.visibilityState === "visible"`.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -41,7 +48,7 @@ fun BigFredWebViewScreen(
     // Freeze the URL for this WebView session so DataStore / nav recompositions
     // with the same address do not trigger a reload (which would churn the WS).
     val sessionUrl = remember(baseUrl) { baseUrl.trimEnd('/') + "/" }
-    var webView by remember { mutableStateOf<WebView?>(null) }
+    var webView by remember { mutableStateOf<KeepAliveWebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -57,13 +64,16 @@ fun BigFredWebViewScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
+                    view.keepWindowVisible = true
                     view.onResume()
                     // Affects all WebViews in the process; required after pauseTimers.
                     view.resumeTimers()
+                    view.requestFocus()
                 }
                 Lifecycle.Event.ON_STOP -> {
                     // Pause only when the Activity is fully stopped — not on
                     // ON_PAUSE (shade / dialogs) so keepalive pings keep flowing.
+                    view.keepWindowVisible = false
                     view.onPause()
                     view.pauseTimers()
                 }
@@ -73,8 +83,10 @@ fun BigFredWebViewScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         // If we attach while already RESUMED, kick timers immediately.
         if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            view.keepWindowVisible = true
             view.onResume()
             view.resumeTimers()
+            view.requestFocus()
         }
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -84,6 +96,7 @@ fun BigFredWebViewScreen(
     DisposableEffect(Unit) {
         onDispose {
             webView?.apply {
+                keepWindowVisible = false
                 stopLoading()
                 // Ensure timers are not left paused for other WebViews after destroy.
                 resumeTimers()
@@ -96,7 +109,7 @@ fun BigFredWebViewScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { context ->
-                WebView(context).apply {
+                KeepAliveWebView(context).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -104,7 +117,7 @@ fun BigFredWebViewScreen(
                     keepScreenOn = true
                     // Stay classified as a visible, focusable surface so Chromium
                     // does not intensive-throttle setInterval while the page is up.
-                    visibility = android.view.View.VISIBLE
+                    visibility = View.VISIBLE
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -113,6 +126,9 @@ fun BigFredWebViewScreen(
                         cacheMode = WebSettings.LOAD_DEFAULT
                         setSupportMultipleWindows(false)
                         javaScriptCanOpenWindowsAutomatically = false
+                        // Keep rasterizing when briefly covered (drawer scrim /
+                        // Compose overlays) so timers are less likely to throttle.
+                        setOffscreenPreRaster(true)
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
@@ -167,5 +183,23 @@ fun BigFredWebViewScreen(
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
+    }
+}
+
+/**
+ * WebView that reports [View.VISIBLE] window visibility while [keepWindowVisible]
+ * is true, so Chromium does not mark the page hidden when a drawer scrim or
+ * other overlay briefly covers it. Real GONE (Activity stopped) is still
+ * forwarded once [keepWindowVisible] is cleared.
+ */
+class KeepAliveWebView(context: Context) : WebView(context) {
+    var keepWindowVisible: Boolean = true
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        if (keepWindowVisible && visibility != View.VISIBLE) {
+            super.onWindowVisibilityChanged(View.VISIBLE)
+            return
+        }
+        super.onWindowVisibilityChanged(visibility)
     }
 }
