@@ -123,7 +123,7 @@ fun BigFredWebViewScreen(
         IconButton(
             onClick = onOpenDrawer,
             modifier = Modifier
-                .align(Alignment.TopStart)
+                .align(Alignment.TopEnd)
                 .padding(8.dp),
             colors = IconButtonDefaults.iconButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurface,

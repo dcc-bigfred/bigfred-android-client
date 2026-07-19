@@ -6,7 +6,7 @@ import androidx.core.content.getSystemService
 
 /**
  * Holds a [WifiManager.WIFI_MODE_FULL_LOW_LATENCY] lock while the app is
- * actively showing BigFred (foreground + screen on).
+ * showing BigFred WebView or the connection status screen (foreground + screen on).
  */
 class LowLatencyWifiLock(context: Context) {
     private val appContext = context.applicationContext
