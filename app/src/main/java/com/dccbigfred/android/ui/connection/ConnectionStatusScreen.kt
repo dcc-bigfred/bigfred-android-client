@@ -61,7 +61,7 @@ fun ConnectionStatusScreen(
     onBack: () -> Unit,
 ) {
     val pinger = remember { IcmpPinger() }
-    val host = remember(serverUrl) { IcmpPinger.hostFromBaseUrl(serverUrl) }
+    val endpoint = remember(serverUrl) { IcmpPinger.endpointFromBaseUrl(serverUrl) }
     val samples = remember { mutableStateListOf<LatencySample>() }
     var nextNum by remember { mutableIntStateOf(1) }
     val lineColor = MaterialTheme.colorScheme.primary
@@ -73,7 +73,7 @@ fun ConnectionStatusScreen(
         samples.clear()
         nextNum = 1
         while (true) {
-            val latency = pinger.measureRttMs(host)
+            val latency = pinger.measureRttMs(endpoint.host, endpoint.port)
             val sample = LatencySample(
                 num = nextNum,
                 latencyMs = latency,
