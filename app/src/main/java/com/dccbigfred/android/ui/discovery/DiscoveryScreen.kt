@@ -114,13 +114,6 @@ fun DiscoveryScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
-            Text(
-                text = "Szukanie: bigfred.local:8080 (mDNS), potem {podsieć}.120:8080, albo wpisz ręcznie.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
             if (scanning) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
