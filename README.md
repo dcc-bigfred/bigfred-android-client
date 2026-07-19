@@ -1,28 +1,28 @@
 # BigFred Android Client
 
-Natywna aplikacja Android pokazująca UI BigFred w WebView, z wyszukiwaniem huba w LAN.
+Native Android app that displays the BigFred UI in a WebView, with LAN hub discovery.
 
-## Wymagania
+## Requirements
 
 - JDK 17+
 - Android SDK (API 35), minSdk 29
-- Android Studio Ladybug+ albo wiersz poleceń Gradle
+- Android Studio Ladybug+ or Gradle from the command line
 
 ## Build
 
 ```bash
 cd bigfred-android-client
 
-# Opcjonalnie: lokalizacja SDK
+# Optional: SDK location
 # echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 make apk      # release APK → app/build/outputs/apk/release/app-release.apk
-make test     # testy jednostkowe (JVM)
+make test     # unit tests (JVM)
 make debug    # debug APK
-make help     # lista targetów
+make help     # list targets
 ```
 
-Podpis release (opcjonalnie; bez tego używany jest debug keystore):
+Release signing (optional; without it the debug keystore is used):
 
 ```bash
 export BIGFRED_STORE_FILE=/path/to/keystore.jks
@@ -32,37 +32,37 @@ export BIGFRED_KEY_PASSWORD=...
 make apk
 ```
 
-W Android Studio: **Open** → katalog `bigfred-android-client` → Run na urządzeniu/emulatorze.
+In Android Studio: **Open** → `bigfred-android-client` directory → Run on a device/emulator.
 
 ## CI / Release
 
-Na push / PR workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) uruchamia `make test` + `make apk` i publikuje artefakt `release-apk`.
+On push / PR, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `make test` + `make apk` and publishes the `release-apk` artifact.
 
-Na push taga `v*` workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) czeka na CI, tworzy GitHub Release (jeśli nie istnieje) i dokłada APK (`gh release upload --clobber`).
+On push of a `v*` tag, [`.github/workflows/release.yml`](.github/workflows/release.yml) waits for CI, creates a GitHub Release (if missing), and attaches the APK (`gh release upload --clobber`).
 
-Opcjonalne secrets do podpisu release:
+Optional secrets for release signing:
 
-| Secret | Opis |
-|--------|------|
-| `BIGFRED_STORE_FILE_CONTENT` | Treść keystore `.jks` zakodowana base64 |
-| `BIGFRED_STORE_PASSWORD` | Hasło keystore |
-| `BIGFRED_KEY_ALIAS` | Alias klucza |
-| `BIGFRED_KEY_PASSWORD` | Hasło klucza |
+| Secret | Description |
+|--------|-------------|
+| `BIGFRED_STORE_FILE_CONTENT` | Keystore `.jks` contents encoded as base64 |
+| `BIGFRED_STORE_PASSWORD` | Keystore password |
+| `BIGFRED_KEY_ALIAS` | Key alias |
+| `BIGFRED_KEY_PASSWORD` | Key password |
 
-Bez `BIGFRED_STORE_FILE_CONTENT` CI podpisuje APK debug keystoreem (nadaje się do instalacji lokalnej / sideload).
+Without `BIGFRED_STORE_FILE_CONTENT`, CI signs the APK with the debug keystore (suitable for local install / sideload).
 
-## Zachowanie
+## Behavior
 
-1. **Cold start** — jeśli zapisany jest URL serwera i `GET /` zwraca sukces, od razu otwiera WebView.
-2. **Discovery** — równolegle:
+1. **Cold start** — if a server URL is saved and `GET /` succeeds, the app opens WebView immediately.
+2. **Discovery** — in parallel:
    - mDNS / `http://bigfred.local:8080/`
-   - NSD `_http._tcp` (instancje BigFred)
-   - fallback `{podsieć}.120:8080`
-   - ręczne wpisanie hosta/portu
-3. Wybrany adres trafia do DataStore; zmiana w menu bocznym → **Ustawienia serwera**.
-4. WebView ładuje lokalną SPA BigFred (JS, DOM storage, cleartext HTTP).
-5. Na czas ekranu WebView trzymany jest `WifiManager.WIFI_MODE_FULL_LOW_LATENCY`.
+   - NSD `_http._tcp` (BigFred instances)
+   - fallback `{subnet}.120:8080`
+   - manual host/port entry
+3. The selected address is stored in DataStore; change it from the side menu → **Server settings**.
+4. WebView loads the local BigFred SPA (JS, DOM storage, cleartext HTTP).
+5. While the WebView screen is shown, `WifiManager.WIFI_MODE_FULL_LOW_LATENCY` is held.
 
-## Uprawnienia
+## Permissions
 
 `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `WAKE_LOCK`.
