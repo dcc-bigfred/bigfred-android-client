@@ -50,4 +50,6 @@
     <string name="connection_latency_ms">%d ms</string>
     <string name="connection_timeout">timeout</string>
     <string name="connection_chart_time">time →</string>
+    <string name="connection_wifi_lock_active">Wi‑Fi low-latency lock: active</string>
+    <string name="connection_wifi_lock_inactive">Wi‑Fi low-latency lock: inactive</string>
 </resources>

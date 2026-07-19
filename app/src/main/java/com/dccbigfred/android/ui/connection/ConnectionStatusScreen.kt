@@ -57,6 +57,7 @@ private const val PING_INTERVAL_MS = 5_000L
 @Composable
 fun ConnectionStatusScreen(
     serverUrl: String,
+    wifiLockHeld: Boolean,
     onBack: () -> Unit,
 ) {
     val probe = remember { ServerProbe() }
@@ -153,7 +154,7 @@ fun ConnectionStatusScreen(
                 )
             }
             HorizontalDivider()
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(modifier = Modifier.weight(1f, fill = true)) {
                 items(samples, key = { it.num }) { sample ->
                     Row(
                         modifier = Modifier
@@ -183,6 +184,23 @@ fun ConnectionStatusScreen(
                     HorizontalDivider()
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(
+                    if (wifiLockHeld) {
+                        R.string.connection_wifi_lock_active
+                    } else {
+                        R.string.connection_wifi_lock_inactive
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (wifiLockHeld) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
         }
     }
 }

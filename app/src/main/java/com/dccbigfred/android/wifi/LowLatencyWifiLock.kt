@@ -12,6 +12,9 @@ class LowLatencyWifiLock(context: Context) {
     private val appContext = context.applicationContext
     private var lock: WifiManager.WifiLock? = null
 
+    val isHeld: Boolean
+        get() = lock?.isHeld == true
+
     fun acquire() {
         if (lock?.isHeld == true) return
         val wifi = appContext.getSystemService<WifiManager>() ?: return
