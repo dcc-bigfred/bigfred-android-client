@@ -9,7 +9,13 @@ import java.util.concurrent.TimeUnit
 class ServerProbe(
     private val client: OkHttpClient = defaultClient(),
 ) {
-    suspend fun isReachable(baseUrl: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun isReachable(baseUrl: String): Boolean =
+        measureLatencyMs(baseUrl) != null
+
+    /**
+     * HTTP round-trip to `GET {baseUrl}/`. Returns latency in milliseconds, or null on failure.
+     */
+    suspend fun measureLatencyMs(baseUrl: String): Long? = withContext(Dispatchers.IO) {
         val url = baseUrl.trimEnd('/') + "/"
         try {
             val request = Request.Builder()
@@ -17,21 +23,23 @@ class ServerProbe(
                 .get()
                 .header("Connection", "close")
                 .build()
+            val started = System.nanoTime()
             client.newCall(request).execute().use { response ->
-                response.isSuccessful
+                val elapsedMs = (System.nanoTime() - started) / 1_000_000L
+                if (response.isSuccessful) elapsedMs else null
             }
         } catch (_: Exception) {
-            false
+            null
         }
     }
 
     companion object {
         fun defaultClient(): OkHttpClient =
             OkHttpClient.Builder()
-                .connectTimeout(2, TimeUnit.SECONDS)
-                .readTimeout(2, TimeUnit.SECONDS)
-                .writeTimeout(2, TimeUnit.SECONDS)
-                .callTimeout(3, TimeUnit.SECONDS)
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .writeTimeout(5, TimeUnit.SECONDS)
+                .callTimeout(5, TimeUnit.SECONDS)
                 .followRedirects(true)
                 .build()
     }

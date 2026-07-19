@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
 import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
@@ -58,6 +60,7 @@ fun BigFredApp() {
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val selectedServerUrl = activeUrl ?: savedUrl
 
     LaunchedEffect(Unit) {
         if (bootstrapped) return@LaunchedEffect
@@ -92,7 +95,7 @@ fun BigFredApp() {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = currentRoute == Routes.WEBVIEW || currentRoute == Routes.SETTINGS,
+        gesturesEnabled = false,
         drawerContent = {
             ModalDrawerSheet {
                 Text(
@@ -112,6 +115,21 @@ fun BigFredApp() {
                         }
                     },
                 )
+                if (selectedServerUrl != null) {
+                    NavigationDrawerItem(
+                        label = { Text("Stan połączenia") },
+                        selected = currentRoute == Routes.CONNECTION,
+                        icon = { Icon(Icons.Default.NetworkCheck, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.CONNECTION) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                    )
+                }
                 NavigationDrawerItem(
                     label = { Text("Wyszukaj serwer") },
                     selected = currentRoute == Routes.DISCOVERY,
@@ -169,6 +187,21 @@ fun BigFredApp() {
                             launchSingleTop = true
                         }
                     },
+                )
+            }
+            composable(Routes.CONNECTION) {
+                val url = selectedServerUrl
+                if (url == null) {
+                    LaunchedEffect(Unit) {
+                        navController.navigate(Routes.DISCOVERY) {
+                            popUpTo(Routes.CONNECTION) { inclusive = true }
+                        }
+                    }
+                    return@composable
+                }
+                ConnectionStatusScreen(
+                    serverUrl = url,
+                    onBack = { navController.popBackStack() },
                 )
             }
         }
