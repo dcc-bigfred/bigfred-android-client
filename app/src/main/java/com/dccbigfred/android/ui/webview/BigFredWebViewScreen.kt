@@ -20,24 +20,73 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
+/**
+ * Hosts the BigFred SPA. Timers and the WebSocket keepalive (2s ping) must keep
+ * running while this screen is shown, otherwise the dcc-bus dead-man (~6s)
+ * emergency-stops moving locos.
+ *
+ * We wire [WebView.onResume]/[WebView.resumeTimers] to [Lifecycle.Event.ON_RESUME]
+ * and only pause on [Lifecycle.Event.ON_STOP], so a brief loss of window focus
+ * (notification shade, drawer) does not freeze JS timers.
+ */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun BigFredWebViewScreen(
     baseUrl: String,
 ) {
+    // Freeze the URL for this WebView session so DataStore / nav recompositions
+    // with the same address do not trigger a reload (which would churn the WS).
+    val sessionUrl = remember(baseUrl) { baseUrl.trimEnd('/') + "/" }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     BackHandler(enabled = canGoBack) {
         webView?.goBack()
+    }
+
+    // Pair WebView with Activity lifecycle so Chromium timers stay alive in
+    // the foreground and resume after backgrounding.
+    DisposableEffect(lifecycleOwner, webView) {
+        val view = webView ?: return@DisposableEffect onDispose { }
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    view.onResume()
+                    // Affects all WebViews in the process; required after pauseTimers.
+                    view.resumeTimers()
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    // Pause only when the Activity is fully stopped — not on
+                    // ON_PAUSE (shade / dialogs) so keepalive pings keep flowing.
+                    view.onPause()
+                    view.pauseTimers()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        // If we attach while already RESUMED, kick timers immediately.
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            view.onResume()
+            view.resumeTimers()
+        }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             webView?.apply {
                 stopLoading()
+                // Ensure timers are not left paused for other WebViews after destroy.
+                resumeTimers()
                 destroy()
             }
             webView = null
@@ -53,6 +102,9 @@ fun BigFredWebViewScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                     )
                     keepScreenOn = true
+                    // Stay classified as a visible, focusable surface so Chromium
+                    // does not intensive-throttle setInterval while the page is up.
+                    visibility = android.view.View.VISIBLE
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
@@ -96,15 +148,18 @@ fun BigFredWebViewScreen(
                             canGoBack = view.canGoBack()
                         }
                     }
-                    loadUrl(baseUrl.trimEnd('/') + "/")
+                    // Tag before load so the first update{} pass does not reload.
+                    tag = sessionUrl
+                    loadUrl(sessionUrl)
                     webView = this
                     requestFocus()
                 }
             },
             update = { view ->
-                if (view.tag != baseUrl) {
-                    view.tag = baseUrl
-                    view.loadUrl(baseUrl.trimEnd('/') + "/")
+                // Reload only when the user actually picks a different hub URL.
+                if (view.tag != sessionUrl) {
+                    view.tag = sessionUrl
+                    view.loadUrl(sessionUrl)
                 }
             },
             modifier = Modifier.fillMaxSize(),

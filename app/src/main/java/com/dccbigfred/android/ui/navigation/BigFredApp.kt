@@ -190,7 +190,10 @@ fun BigFredApp() {
                         }
                         return@composable
                     }
-                    DisposableEffect(url) {
+                    // Hold the WiFi lock for the whole WebView visit (not keyed on
+                    // url) so a DataStore refresh of the same address cannot
+                    // briefly release/reacquire and stall the keepalive socket.
+                    DisposableEffect(Unit) {
                         wifiLock.acquire()
                         onDispose { wifiLock.release() }
                     }
