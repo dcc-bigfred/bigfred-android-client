@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BigFred</string>
+
+    <!-- Common -->
+    <string name="back">Wstecz</string>
+    <string name="menu">Menu</string>
+    <string name="refresh">Odśwież</string>
+
+    <!-- Drawer -->
+    <string name="menu_settings">Ustawienia</string>
+    <string name="menu_connection_status">Stan połączenia</string>
+    <string name="menu_find_server">Wyszukaj serwer</string>
+
+    <!-- Discovery -->
+    <string name="discovery_title">Wybierz serwer BigFred</string>
+    <string name="discovery_scanning">Skanowanie sieci…</string>
+    <string name="discovery_empty">Nie znaleziono serwera. Sprawdź Wi‑Fi lub wpisz adres ręcznie.</string>
+    <string name="discovery_manual">Ręcznie</string>
+    <string name="discovery_host_label">Host / IP</string>
+    <string name="discovery_port_label">Port</string>
+    <string name="discovery_connect">Sprawdź i połącz</string>
+    <string name="discovery_error_host_required">Podaj host lub adres IP</string>
+    <string name="discovery_error_unreachable">Serwer nie odpowiada na /</string>
+    <string name="discovery_source_mdns">mDNS</string>
+    <string name="discovery_source_subnet">podsieć .120</string>
+    <string name="discovery_source_manual">ręczny</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ustawienia</string>
+    <string name="settings_language_section">Język</string>
+    <string name="settings_language_system">Systemowy</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_german">Deutsch</string>
+    <string name="settings_server_section">Serwer</string>
+    <string name="settings_server_hint">Adres BigFred (np. http://bigfred.local:8080 lub http://192.168.0.120:8080)</string>
+    <string name="settings_server_url_label">URL serwera</string>
+    <string name="settings_check_and_save">Sprawdź i zapisz</string>
+    <string name="settings_save_without_check">Zapisz bez sprawdzania</string>
+    <string name="settings_search_again">Wyszukaj serwer ponownie</string>
+    <string name="settings_error_url_required">Podaj adres serwera</string>
+    <string name="settings_error_unreachable">Serwer nie odpowiada na / — zapisano mimo to? Użyj „Zapisz bez sprawdzania” lub popraw adres.</string>
+
+    <!-- Connection status -->
+    <string name="connection_title">Stan połączenia</string>
+    <string name="connection_latency_axis">Opóźnienie (ms)</string>
+    <string name="connection_col_num">Num</string>
+    <string name="connection_col_latency">Latency</string>
+    <string name="connection_latency_ms">%d ms</string>
+    <string name="connection_timeout">timeout</string>
+    <string name="connection_chart_time">czas →</string>
+</resources>

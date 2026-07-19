@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -33,6 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dccbigfred.android.BigFredApplication
+import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
@@ -99,11 +101,11 @@ fun BigFredApp() {
         drawerContent = {
             ModalDrawerSheet {
                 Text(
-                    text = "BigFred",
+                    text = stringResource(R.string.app_name),
                     modifier = Modifier.padding(16.dp),
                 )
                 NavigationDrawerItem(
-                    label = { Text("Ustawienia serwera") },
+                    label = { Text(stringResource(R.string.menu_settings)) },
                     selected = currentRoute == Routes.SETTINGS,
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     onClick = {
@@ -117,7 +119,7 @@ fun BigFredApp() {
                 )
                 if (selectedServerUrl != null) {
                     NavigationDrawerItem(
-                        label = { Text("Stan połączenia") },
+                        label = { Text(stringResource(R.string.menu_connection_status)) },
                         selected = currentRoute == Routes.CONNECTION,
                         icon = { Icon(Icons.Default.NetworkCheck, contentDescription = null) },
                         onClick = {
@@ -131,7 +133,7 @@ fun BigFredApp() {
                     )
                 }
                 NavigationDrawerItem(
-                    label = { Text("Wyszukaj serwer") },
+                    label = { Text(stringResource(R.string.menu_find_server)) },
                     selected = currentRoute == Routes.DISCOVERY,
                     icon = { Icon(Icons.Default.Search, contentDescription = null) },
                     onClick = {

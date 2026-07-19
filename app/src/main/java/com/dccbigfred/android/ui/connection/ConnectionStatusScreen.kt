@@ -34,10 +34,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dccbigfred.android.R
 import com.dccbigfred.android.network.ServerProbe
 import kotlinx.coroutines.delay
 import kotlin.math.max
@@ -63,6 +65,7 @@ fun ConnectionStatusScreen(
     val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val chartTimeLabel = stringResource(R.string.connection_chart_time)
 
     LaunchedEffect(serverUrl) {
         samples.clear()
@@ -89,10 +92,13 @@ fun ConnectionStatusScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Stan połączenia") },
+                title = { Text(stringResource(R.string.connection_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wstecz")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
                     }
                 },
             )
@@ -111,7 +117,7 @@ fun ConnectionStatusScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Latency (ms)",
+                text = stringResource(R.string.connection_latency_axis),
                 style = MaterialTheme.typography.labelMedium,
                 color = labelColor,
             )
@@ -121,6 +127,7 @@ fun ConnectionStatusScreen(
                 lineColor = lineColor,
                 gridColor = gridColor,
                 labelColor = labelColor,
+                timeAxisLabel = chartTimeLabel,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
@@ -132,13 +139,13 @@ fun ConnectionStatusScreen(
                     .padding(vertical = 8.dp),
             ) {
                 Text(
-                    text = "Num",
+                    text = stringResource(R.string.connection_col_num),
                     modifier = Modifier.weight(0.35f),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "Latency",
+                    text = stringResource(R.string.connection_col_latency),
                     modifier = Modifier.weight(0.65f),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
@@ -160,7 +167,9 @@ fun ConnectionStatusScreen(
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
-                            text = sample.latencyMs?.let { "${it} ms" } ?: "timeout",
+                            text = sample.latencyMs?.let {
+                                stringResource(R.string.connection_latency_ms, it.toInt())
+                            } ?: stringResource(R.string.connection_timeout),
                             modifier = Modifier.weight(0.65f),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.End,
@@ -184,6 +193,7 @@ private fun LatencyChart(
     lineColor: androidx.compose.ui.graphics.Color,
     gridColor: androidx.compose.ui.graphics.Color,
     labelColor: androidx.compose.ui.graphics.Color,
+    timeAxisLabel: String,
     modifier: Modifier = Modifier,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -263,10 +273,9 @@ private fun LatencyChart(
             style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
         )
 
-        // X axis hint
         paint.textAlign = android.graphics.Paint.Align.CENTER
         drawContext.canvas.nativeCanvas.drawText(
-            "time →",
+            timeAxisLabel,
             leftPad + plotW / 2f,
             size.height - 4.dp.toPx(),
             paint,

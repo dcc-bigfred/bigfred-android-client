@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BigFred</string>
+
+    <!-- Common -->
+    <string name="back">Zurück</string>
+    <string name="menu">Menü</string>
+    <string name="refresh">Aktualisieren</string>
+
+    <!-- Drawer -->
+    <string name="menu_settings">Einstellungen</string>
+    <string name="menu_connection_status">Verbindungsstatus</string>
+    <string name="menu_find_server">Server suchen</string>
+
+    <!-- Discovery -->
+    <string name="discovery_title">BigFred-Server wählen</string>
+    <string name="discovery_scanning">Netzwerk wird gescannt…</string>
+    <string name="discovery_empty">Kein Server gefunden. Prüfen Sie Wi‑Fi oder geben Sie die Adresse manuell ein.</string>
+    <string name="discovery_manual">Manuell</string>
+    <string name="discovery_host_label">Host / IP</string>
+    <string name="discovery_port_label">Port</string>
+    <string name="discovery_connect">Prüfen und verbinden</string>
+    <string name="discovery_error_host_required">Host oder IP-Adresse eingeben</string>
+    <string name="discovery_error_unreachable">Server antwortet nicht auf /</string>
+    <string name="discovery_source_mdns">mDNS</string>
+    <string name="discovery_source_subnet">Subnetz .120</string>
+    <string name="discovery_source_manual">manuell</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_language_section">Sprache</string>
+    <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_german">Deutsch</string>
+    <string name="settings_server_section">Server</string>
+    <string name="settings_server_hint">BigFred-Adresse (z. B. http://bigfred.local:8080 oder http://192.168.0.120:8080)</string>
+    <string name="settings_server_url_label">Server-URL</string>
+    <string name="settings_check_and_save">Prüfen und speichern</string>
+    <string name="settings_save_without_check">Ohne Prüfung speichern</string>
+    <string name="settings_search_again">Server erneut suchen</string>
+    <string name="settings_error_url_required">Serveradresse eingeben</string>
+    <string name="settings_error_unreachable">Server antwortet nicht auf / — trotzdem speichern? „Ohne Prüfung speichern“ nutzen oder Adresse korrigieren.</string>
+
+    <!-- Connection status -->
+    <string name="connection_title">Verbindungsstatus</string>
+    <string name="connection_latency_axis">Latenz (ms)</string>
+    <string name="connection_col_num">Nr.</string>
+    <string name="connection_col_latency">Latenz</string>
+    <string name="connection_latency_ms">%d ms</string>
+    <string name="connection_timeout">Timeout</string>
+    <string name="connection_chart_time">Zeit →</string>
+</resources>

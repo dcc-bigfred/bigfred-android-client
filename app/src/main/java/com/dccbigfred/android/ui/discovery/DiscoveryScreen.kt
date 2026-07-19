@@ -40,10 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dccbigfred.android.R
 import com.dccbigfred.android.discovery.DiscoveredServer
 import com.dccbigfred.android.discovery.DiscoverySource
 import com.dccbigfred.android.discovery.ServerDiscovery
@@ -65,6 +67,9 @@ fun DiscoveryScreen(
     var manualError by remember { mutableStateOf<String?>(null) }
     var manualBusy by remember { mutableStateOf(false) }
 
+    val errorHostRequired = stringResource(R.string.discovery_error_host_required)
+    val errorUnreachable = stringResource(R.string.discovery_error_unreachable)
+
     DisposableEffect(Unit) {
         discovery.start()
         onDispose { discovery.stop() }
@@ -73,7 +78,7 @@ fun DiscoveryScreen(
     fun submitManual() {
         val host = hostInput.trim()
         if (host.isEmpty()) {
-            manualError = "Podaj host lub adres IP"
+            manualError = errorHostRequired
             return
         }
         val port = portInput.toIntOrNull() ?: 8080
@@ -85,7 +90,7 @@ fun DiscoveryScreen(
             if (found != null) {
                 onServerSelected(found.baseUrl)
             } else {
-                manualError = "Serwer nie odpowiada na /"
+                manualError = errorUnreachable
             }
         }
     }
@@ -93,7 +98,7 @@ fun DiscoveryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Wybierz serwer BigFred") },
+                title = { Text(stringResource(R.string.discovery_title)) },
                 actions = {
                     IconButton(
                         onClick = {
@@ -102,7 +107,10 @@ fun DiscoveryScreen(
                         },
                         enabled = !scanning,
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Odśwież")
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.refresh),
+                        )
                     }
                 },
             )
@@ -118,7 +126,7 @@ fun DiscoveryScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Skanowanie sieci…")
+                    Text(stringResource(R.string.discovery_scanning))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -131,7 +139,7 @@ fun DiscoveryScreen(
                 if (servers.isEmpty() && !scanning) {
                     item {
                         Text(
-                            text = "Nie znaleziono serwera. Sprawdź Wi‑Fi lub wpisz adres ręcznie.",
+                            text = stringResource(R.string.discovery_empty),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                     }
@@ -142,7 +150,7 @@ fun DiscoveryScreen(
                 }
             }
 
-            Text("Ręcznie", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.discovery_manual), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = hostInput,
@@ -151,7 +159,7 @@ fun DiscoveryScreen(
                     manualError = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Host / IP") },
+                label = { Text(stringResource(R.string.discovery_host_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -163,7 +171,7 @@ fun DiscoveryScreen(
                 value = portInput,
                 onValueChange = { portInput = it.filter { c -> c.isDigit() }.take(5) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Port") },
+                label = { Text(stringResource(R.string.discovery_port_label)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
@@ -188,7 +196,7 @@ fun DiscoveryScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Sprawdź i połącz")
+                Text(stringResource(R.string.discovery_connect))
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -206,8 +214,9 @@ private fun ServerRow(server: DiscoveredServer, onClick: () -> Unit) {
     )
 }
 
+@Composable
 private fun sourceLabel(source: DiscoverySource): String = when (source) {
-    DiscoverySource.MDNS -> "mDNS"
-    DiscoverySource.SUBNET -> "podsieć .120"
-    DiscoverySource.MANUAL -> "ręczny"
+    DiscoverySource.MDNS -> stringResource(R.string.discovery_source_mdns)
+    DiscoverySource.SUBNET -> stringResource(R.string.discovery_source_subnet)
+    DiscoverySource.MANUAL -> stringResource(R.string.discovery_source_manual)
 }

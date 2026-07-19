@@ -26,8 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.dccbigfred.android.R
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -128,7 +130,7 @@ fun BigFredWebViewScreen(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
             ),
         ) {
-            Icon(Icons.Default.Menu, contentDescription = "Menu")
+            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
         }
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
