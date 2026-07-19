@@ -40,7 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dccbigfred.android.R
-import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.network.IcmpPinger
 import kotlinx.coroutines.delay
 import kotlin.math.max
 
@@ -50,8 +50,8 @@ data class LatencySample(
     val atEpochMs: Long,
 )
 
-private const val MAX_SAMPLES = 15
-private const val PING_INTERVAL_MS = 5_000L
+private const val MAX_SAMPLES = 30
+private const val PING_INTERVAL_MS = 1_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +60,8 @@ fun ConnectionStatusScreen(
     wifiLockHeld: Boolean,
     onBack: () -> Unit,
 ) {
-    val probe = remember { ServerProbe() }
+    val pinger = remember { IcmpPinger() }
+    val host = remember(serverUrl) { IcmpPinger.hostFromBaseUrl(serverUrl) }
     val samples = remember { mutableStateListOf<LatencySample>() }
     var nextNum by remember { mutableIntStateOf(1) }
     val lineColor = MaterialTheme.colorScheme.primary
@@ -72,7 +73,7 @@ fun ConnectionStatusScreen(
         samples.clear()
         nextNum = 1
         while (true) {
-            val latency = probe.measureLatencyMs(serverUrl)
+            val latency = pinger.measureRttMs(host)
             val sample = LatencySample(
                 num = nextNum,
                 latencyMs = latency,
