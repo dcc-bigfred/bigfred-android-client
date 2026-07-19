@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- BigFred hubs serve HTTP on the LAN; cleartext is required. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
