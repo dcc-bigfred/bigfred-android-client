@@ -10,14 +10,7 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -26,16 +19,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.dccbigfred.android.R
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun BigFredWebViewScreen(
     baseUrl: String,
-    onOpenDrawer: () -> Unit,
 ) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -120,18 +109,6 @@ fun BigFredWebViewScreen(
             },
             modifier = Modifier.fillMaxSize(),
         )
-        IconButton(
-            onClick = onOpenDrawer,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-            ),
-        ) {
-            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
-        }
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }

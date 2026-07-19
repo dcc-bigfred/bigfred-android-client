@@ -20,7 +20,6 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,9 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -54,7 +51,7 @@ import com.dccbigfred.android.wifi.LowLatencyWifiLock
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Only this strip at the physical right edge can start an open gesture. */
+/** Only this strip at the physical left edge can start an open gesture. */
 private val DrawerOpenEdgeWidth = 28.dp
 private const val DrawerOpenDragThresholdPx = 40f
 
@@ -112,153 +109,147 @@ fun BigFredApp() {
         scope.launch { drawerState.close() }
     }
 
-    // RTL makes ModalNavigationDrawer anchor to the physical right edge.
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            // When closed: no full-screen open gesture (middle of screen stays free).
-            // When open: swipe / scrim tap can close the drawer.
-            gesturesEnabled = drawerState.isOpen,
-            drawerContent = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    ModalDrawerSheet {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            modifier = Modifier.padding(16.dp),
-                        )
-                        NavigationDrawerItem(
-                            label = { Text(stringResource(R.string.menu_settings)) },
-                            selected = currentRoute == Routes.SETTINGS,
-                            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                            onClick = {
-                                scope.launch {
-                                    drawerState.close()
-                                    navController.navigate(Routes.SETTINGS) {
-                                        launchSingleTop = true
-                                    }
-                                }
-                            },
-                        )
-                        if (selectedServerUrl != null) {
-                            NavigationDrawerItem(
-                                label = { Text(stringResource(R.string.menu_connection_status)) },
-                                selected = currentRoute == Routes.CONNECTION,
-                                icon = {
-                                    Icon(Icons.Default.NetworkCheck, contentDescription = null)
-                                },
-                                onClick = {
-                                    scope.launch {
-                                        drawerState.close()
-                                        navController.navigate(Routes.CONNECTION) {
-                                            launchSingleTop = true
-                                        }
-                                    }
-                                },
-                            )
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        // When closed: no full-screen open gesture (middle of screen stays free).
+        // When open: swipe / scrim tap can close the drawer.
+        gesturesEnabled = drawerState.isOpen,
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    modifier = Modifier.padding(16.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_settings)) },
+                    selected = currentRoute == Routes.SETTINGS,
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.SETTINGS) {
+                                launchSingleTop = true
+                            }
                         }
-                        NavigationDrawerItem(
-                            label = { Text(stringResource(R.string.menu_find_server)) },
-                            selected = currentRoute == Routes.DISCOVERY,
-                            icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            onClick = {
-                                scope.launch {
-                                    drawerState.close()
-                                    navController.navigate(Routes.DISCOVERY) {
-                                        launchSingleTop = true
-                                    }
+                    },
+                )
+                if (selectedServerUrl != null) {
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_connection_status)) },
+                        selected = currentRoute == Routes.CONNECTION,
+                        icon = { Icon(Icons.Default.NetworkCheck, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.CONNECTION) {
+                                    launchSingleTop = true
                                 }
-                            },
-                        )
-                    }
+                            }
+                        },
+                    )
                 }
-            },
-        ) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    NavHost(
-                        navController = navController,
-                        startDestination = Routes.BOOTSTRAP,
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_find_server)) },
+                    selected = currentRoute == Routes.DISCOVERY,
+                    icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.DISCOVERY) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
+            }
+        },
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = Routes.BOOTSTRAP,
+            ) {
+                composable(Routes.BOOTSTRAP) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        composable(Routes.BOOTSTRAP) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                        composable(Routes.DISCOVERY) {
-                            DiscoveryScreen(onServerSelected = { url -> goToWebView(url) })
-                        }
-                        composable(Routes.WEBVIEW) {
-                            val url = activeUrl ?: savedUrl
-                            if (url == null) {
-                                LaunchedEffect(Unit) {
-                                    navController.navigate(Routes.DISCOVERY) {
-                                        popUpTo(Routes.WEBVIEW) { inclusive = true }
-                                    }
-                                }
-                                return@composable
-                            }
-                            DisposableEffect(url) {
-                                wifiLock.acquire()
-                                onDispose { wifiLock.release() }
-                            }
-                            BigFredWebViewScreen(
-                                baseUrl = url,
-                                onOpenDrawer = { scope.launch { drawerState.open() } },
-                            )
-                        }
-                        composable(Routes.SETTINGS) {
-                            SettingsScreen(
-                                currentUrl = activeUrl ?: savedUrl,
-                                onBack = { navController.popBackStack() },
-                                onSaved = { url -> goToWebView(url) },
-                                onSearchAgain = {
-                                    navController.navigate(Routes.DISCOVERY) {
-                                        launchSingleTop = true
-                                    }
-                                },
-                            )
-                        }
-                        composable(Routes.CONNECTION) {
-                            val url = selectedServerUrl
-                            if (url == null) {
-                                LaunchedEffect(Unit) {
-                                    navController.navigate(Routes.DISCOVERY) {
-                                        popUpTo(Routes.CONNECTION) { inclusive = true }
-                                    }
-                                }
-                                return@composable
-                            }
-                            DisposableEffect(url) {
-                                wifiLock.acquire()
-                                onDispose { wifiLock.release() }
-                            }
-                            ConnectionStatusScreen(
-                                serverUrl = url,
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
-                    }
-
-                    if (drawerState.isClosed) {
-                        RightEdgeOpenHandle(
-                            onOpen = { scope.launch { drawerState.open() } },
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .fillMaxHeight()
-                                .width(DrawerOpenEdgeWidth),
-                        )
+                        CircularProgressIndicator()
                     }
                 }
+                composable(Routes.DISCOVERY) {
+                    DiscoveryScreen(onServerSelected = { url -> goToWebView(url) })
+                }
+                composable(Routes.WEBVIEW) {
+                    val url = activeUrl ?: savedUrl
+                    if (url == null) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(Routes.DISCOVERY) {
+                                popUpTo(Routes.WEBVIEW) { inclusive = true }
+                            }
+                        }
+                        return@composable
+                    }
+                    DisposableEffect(url) {
+                        wifiLock.acquire()
+                        onDispose { wifiLock.release() }
+                    }
+                    BigFredWebViewScreen(baseUrl = url)
+                }
+                composable(Routes.SETTINGS) {
+                    SettingsScreen(
+                        currentUrl = activeUrl ?: savedUrl,
+                        onBack = { navController.popBackStack() },
+                        onSaved = { url -> goToWebView(url) },
+                        onSearchAgain = {
+                            navController.navigate(Routes.DISCOVERY) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
+                composable(Routes.CONNECTION) {
+                    val url = selectedServerUrl
+                    if (url == null) {
+                        LaunchedEffect(Unit) {
+                            navController.navigate(Routes.DISCOVERY) {
+                                popUpTo(Routes.CONNECTION) { inclusive = true }
+                            }
+                        }
+                        return@composable
+                    }
+                    var wifiLockHeld by remember(url) { mutableStateOf(false) }
+                    DisposableEffect(url) {
+                        wifiLock.acquire()
+                        wifiLockHeld = wifiLock.isHeld
+                        onDispose {
+                            wifiLock.release()
+                            wifiLockHeld = false
+                        }
+                    }
+                    ConnectionStatusScreen(
+                        serverUrl = url,
+                        wifiLockHeld = wifiLockHeld,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+            }
+
+            if (drawerState.isClosed) {
+                LeftEdgeOpenHandle(
+                    onOpen = { scope.launch { drawerState.open() } },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .fillMaxHeight()
+                        .width(DrawerOpenEdgeWidth),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun RightEdgeOpenHandle(
+private fun LeftEdgeOpenHandle(
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -269,9 +260,9 @@ private fun RightEdgeOpenHandle(
                 onDragStart = { dragged = 0f },
                 onHorizontalDrag = { change, dragAmount ->
                     change.consume()
-                    // Dragging left from the right edge opens the drawer.
-                    if (dragAmount < 0f) {
-                        dragged += -dragAmount
+                    // Dragging right from the left edge opens the drawer.
+                    if (dragAmount > 0f) {
+                        dragged += dragAmount
                     }
                 },
                 onDragEnd = {
