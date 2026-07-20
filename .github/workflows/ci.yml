@@ -36,6 +36,34 @@ jobs:
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
           yes | sdkmanager --licenses >/dev/null || true
 
+      - name: Cache hydrus models assets
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/assets/models
+          key: hydrus-models-${{ hashFiles('tools/hydrus-import/**') }}-${{ github.run_id }}
+          restore-keys: |
+            hydrus-models-${{ hashFiles('tools/hydrus-import/**') }}-
+            hydrus-models-
+
+      - name: Import hydrus models
+        id: import-models
+        continue-on-error: true
+        run: make import-models
+
+      - name: Require models assets
+        run: |
+          set -euo pipefail
+          if [ -f app/src/main/assets/models/models.db ]; then
+            if [ "${{ steps.import-models.outcome }}" != "success" ]; then
+              echo "::warning::Import failed; using cached models.db + images"
+            fi
+            ls -lh app/src/main/assets/models/models.db
+            echo "Images: $(find app/src/main/assets/models/images -type f 2>/dev/null | wc -l)"
+          else
+            echo "::error::No models.db (import failed and cache miss)"
+            exit 1
+          fi
+
       - name: Decode release keystore
         env:
           BIGFRED_STORE_FILE_CONTENT: ${{ secrets.BIGFRED_STORE_FILE_CONTENT }}
