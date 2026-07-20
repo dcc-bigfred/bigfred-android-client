@@ -4,6 +4,31 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+fun gitCommand(vararg args: String): String {
+    return try {
+        val process = ProcessBuilder("git", *args)
+            .directory(rootProject.projectDir)
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor()
+        if (process.exitValue() == 0 && output.isNotEmpty()) output else ""
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+val gitCommitShort = (System.getenv("GITHUB_SHA")?.take(12)
+    ?: gitCommand("rev-parse", "--short=12", "HEAD"))
+    .ifEmpty { "unknown" }
+val gitCommitFull = (System.getenv("GITHUB_SHA")
+    ?: gitCommand("rev-parse", "HEAD"))
+    .ifEmpty { "unknown" }
+val gitDirty = when {
+    System.getenv("CI") != null -> false
+    else -> gitCommand("status", "--porcelain").isNotEmpty()
+}
+
 android {
     namespace = "com.dccbigfred.android"
     compileSdk = 35
@@ -13,7 +38,11 @@ android {
         minSdk = 29
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.1.1"
+
+        buildConfigField("String", "GIT_COMMIT", "\"$gitCommitShort\"")
+        buildConfigField("String", "GIT_COMMIT_FULL", "\"$gitCommitFull\"")
+        buildConfigField("boolean", "GIT_DIRTY", "$gitDirty")
     }
 
     signingConfigs {
@@ -53,6 +82,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

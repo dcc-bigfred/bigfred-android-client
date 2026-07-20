@@ -13,11 +13,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +27,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.dccbigfred.android.BuildConfig
+import com.dccbigfred.android.models.ModelPickPayload
+import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 
 /**
  * Hosts the BigFred SPA. Timers and the WebSocket keepalive (2s ping) must keep
@@ -51,9 +56,15 @@ fun BigFredWebViewScreen(
     var webView by remember { mutableStateOf<KeepAliveWebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
+    var pickerVisible by remember { mutableStateOf(false) }
+    val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    BackHandler(enabled = canGoBack) {
+    BackHandler(enabled = pickerVisible) {
+        deliverModelPickResult(webView, null)
+        pickerVisible = false
+    }
+    BackHandler(enabled = !pickerVisible && canGoBack) {
         webView?.goBack()
     }
 
@@ -108,8 +119,8 @@ fun BigFredWebViewScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
-            factory = { context ->
-                KeepAliveWebView(context).apply {
+            factory = { ctx ->
+                KeepAliveWebView(ctx).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -129,9 +140,20 @@ fun BigFredWebViewScreen(
                         // Keep rasterizing when briefly covered (drawer scrim /
                         // Compose overlays) so timers are less likely to throttle.
                         setOffscreenPreRaster(true)
+                        userAgentString =
+                            "$userAgentString BigFredAndroid/${BuildConfig.VERSION_NAME}"
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
+                    // openModelPicker runs on the binder thread — post to main.
+                    addJavascriptInterface(
+                        BigFredJsBridge(
+                            onOpenModelPicker = {
+                                post { openPicker() }
+                            },
+                        ),
+                        "BigFredAndroid",
+                    )
                     webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(
@@ -183,6 +205,42 @@ fun BigFredWebViewScreen(
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
+        if (pickerVisible) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                ModelsCatalogScreen(
+                    onBack = {
+                        deliverModelPickResult(webView, null)
+                        pickerVisible = false
+                    },
+                    pickerMode = true,
+                    onModelPicked = { row ->
+                        deliverModelPickResult(webView, ModelPickPayload.fromRow(row))
+                        pickerVisible = false
+                    },
+                    onCancel = {
+                        deliverModelPickResult(webView, null)
+                        pickerVisible = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?) {
+    val view = webView ?: return
+    val arg = if (payload == null) {
+        "null"
+    } else {
+        // JSONObject string is already JSON; quote for JS string then parse,
+        // or embed as raw object literal via JSONObject.toString().
+        payload.toJson()
+    }
+    val script =
+        "(function(){var r=window.__bigfredOnModelPicked;if(typeof r==='function'){r($arg);}})();"
+            .replace("\$arg", arg)
+    view.post {
+        view.evaluateJavascript(script, null)
     }
 }
 

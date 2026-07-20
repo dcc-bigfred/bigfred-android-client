@@ -7,4 +7,5 @@ object Routes {
     const val SETTINGS = "settings"
     const val CONNECTION = "connection"
     const val MODELS = "models"
+    const val ABOUT = "about"
 }

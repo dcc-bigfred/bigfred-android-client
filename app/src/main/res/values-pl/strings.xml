@@ -12,9 +12,12 @@
     <string name="menu_connection_status">Stan połączenia</string>
     <string name="menu_find_server">Wyszukaj serwer</string>
     <string name="menu_models">Baza modeli</string>
+    <string name="menu_about">O aplikacji</string>
 
     <!-- Models catalog -->
     <string name="models_title">Baza modeli</string>
+    <string name="models_pick_title">Wybierz model</string>
+    <string name="models_select">Wybierz model</string>
     <string name="models_filters">Filtry</string>
     <string name="models_filters_clear">Wyczyść filtry</string>
     <string name="models_filter_search">Szukaj</string>
@@ -84,4 +87,13 @@
     <string name="connection_chart_time">czas →</string>
     <string name="connection_wifi_lock_active">Blokada Wi‑Fi low-latency: aktywna</string>
     <string name="connection_wifi_lock_inactive">Blokada Wi‑Fi low-latency: nieaktywna</string>
+
+    <!-- About -->
+    <string name="about_title">O aplikacji</string>
+    <string name="about_version">Wersja</string>
+    <string name="about_version_code">Kod wersji</string>
+    <string name="about_commit">Commit</string>
+    <string name="about_commit_full">Commit (pełny)</string>
+    <string name="about_commit_dirty">%1$s (dirty)</string>
+    <string name="about_build_type">Typ buildu</string>
 </resources>

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRailway
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -44,6 +45,7 @@ import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
@@ -176,6 +178,19 @@ fun BigFredApp() {
                         }
                     },
                 )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_about)) },
+                    selected = currentRoute == Routes.ABOUT,
+                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.ABOUT) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
             }
         },
     ) {
@@ -253,6 +268,11 @@ fun BigFredApp() {
                 }
                 composable(Routes.MODELS) {
                     ModelsCatalogScreen(
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.ABOUT) {
+                    AboutScreen(
                         onBack = { navController.popBackStack() },
                     )
                 }
