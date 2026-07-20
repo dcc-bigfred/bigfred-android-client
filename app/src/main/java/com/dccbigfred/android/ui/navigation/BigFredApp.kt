@@ -1,5 +1,6 @@
 package com.dccbigfred.android.ui.navigation
 
+import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRailway
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -24,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,12 +48,15 @@ import androidx.navigation.compose.rememberNavController
 import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
+import com.dccbigfred.android.locale.LocalePrefs
 import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
+import com.dccbigfred.android.ui.webview.applyLocaleToWebView
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -71,11 +79,15 @@ fun BigFredApp() {
 
     var bootstrapped by remember { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
+    var spaWebView by remember { mutableStateOf<WebView?>(null) }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val selectedServerUrl = activeUrl ?: savedUrl
 
+    fun pushLocaleToSpa() {
+        applyLocaleToWebView(spaWebView, LocalePrefs.resolvedWebLocale())
+    }
     LaunchedEffect(Unit) {
         if (bootstrapped) return@LaunchedEffect
         val url = prefs.serverBaseUrl.first()
@@ -107,6 +119,24 @@ fun BigFredApp() {
         }
     }
 
+    fun openBigFredApp() {
+        scope.launch {
+            drawerState.close()
+            if (selectedServerUrl != null) {
+                navController.navigate(Routes.WEBVIEW) {
+                    launchSingleTop = true
+                }
+            } else {
+                navController.navigate(Routes.DISCOVERY) {
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
+
+    val webViewVisible = currentRoute == Routes.WEBVIEW
+    val webSessionUrl = selectedServerUrl
+
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
     }
@@ -121,6 +151,12 @@ fun BigFredApp() {
                 Text(
                     text = stringResource(R.string.app_name),
                     modifier = Modifier.padding(16.dp),
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_app)) },
+                    selected = currentRoute == Routes.WEBVIEW,
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    onClick = { openBigFredApp() },
                 )
                 NavigationDrawerItem(
                     label = { Text(stringResource(R.string.menu_settings)) },
@@ -176,13 +212,50 @@ fun BigFredApp() {
                         }
                     },
                 )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_about)) },
+                    selected = currentRoute == Routes.ABOUT,
+                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.ABOUT) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
             }
         },
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            // Keep the WebView alive while browsing other drawer screens so SPA
+            // route, history and the WS keepalive are preserved on return.
+            if (webSessionUrl != null) {
+                key(webSessionUrl) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(if (webViewVisible) 1f else 0f),
+                    ) {
+                        DisposableEffect(Unit) {
+                            wifiLock.acquire()
+                            onDispose { wifiLock.release() }
+                        }
+                        BigFredWebViewScreen(
+                            baseUrl = webSessionUrl,
+                            onWebViewReady = { spaWebView = it },
+                        )
+                    }
+                }
+            }
+
             NavHost(
                 navController = navController,
                 startDestination = Routes.BOOTSTRAP,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(if (webViewVisible) 0f else 1f),
             ) {
                 composable(Routes.BOOTSTRAP) {
                     Box(
@@ -196,23 +269,13 @@ fun BigFredApp() {
                     DiscoveryScreen(onServerSelected = { url -> goToWebView(url) })
                 }
                 composable(Routes.WEBVIEW) {
-                    val url = activeUrl ?: savedUrl
-                    if (url == null) {
+                    if (webSessionUrl == null) {
                         LaunchedEffect(Unit) {
                             navController.navigate(Routes.DISCOVERY) {
                                 popUpTo(Routes.WEBVIEW) { inclusive = true }
                             }
                         }
-                        return@composable
                     }
-                    // Hold the WiFi lock for the whole WebView visit (not keyed on
-                    // url) so a DataStore refresh of the same address cannot
-                    // briefly release/reacquire and stall the keepalive socket.
-                    DisposableEffect(Unit) {
-                        wifiLock.acquire()
-                        onDispose { wifiLock.release() }
-                    }
-                    BigFredWebViewScreen(baseUrl = url)
                 }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
@@ -224,6 +287,7 @@ fun BigFredApp() {
                                 launchSingleTop = true
                             }
                         },
+                        onLocaleChanged = { pushLocaleToSpa() },
                     )
                 }
                 composable(Routes.CONNECTION) {
@@ -256,6 +320,11 @@ fun BigFredApp() {
                         onBack = { navController.popBackStack() },
                     )
                 }
+                composable(Routes.ABOUT) {
+                    AboutScreen(
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
 
             if (drawerState.isClosed) {
@@ -264,7 +333,8 @@ fun BigFredApp() {
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .fillMaxHeight()
-                        .width(DrawerOpenEdgeWidth),
+                        .width(DrawerOpenEdgeWidth)
+                        .zIndex(2f),
                 )
             }
         }

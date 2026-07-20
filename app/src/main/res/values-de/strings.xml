@@ -8,13 +8,17 @@
     <string name="refresh">Aktualisieren</string>
 
     <!-- Drawer -->
+    <string name="menu_app">BigFred-Anwendung</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="menu_connection_status">Verbindungsstatus</string>
     <string name="menu_find_server">Server suchen</string>
     <string name="menu_models">Modellkatalog</string>
+    <string name="menu_about">Über</string>
 
     <!-- Models catalog -->
     <string name="models_title">Modellkatalog</string>
+    <string name="models_pick_title">Modell wählen</string>
+    <string name="models_select">Modell wählen</string>
     <string name="models_filters">Filter</string>
     <string name="models_filters_clear">Filter zurücksetzen</string>
     <string name="models_filter_search">Suche</string>
@@ -84,4 +88,14 @@
     <string name="connection_chart_time">Zeit →</string>
     <string name="connection_wifi_lock_active">Wi‑Fi Low-Latency-Sperre: aktiv</string>
     <string name="connection_wifi_lock_inactive">Wi‑Fi Low-Latency-Sperre: inaktiv</string>
+
+    <!-- About -->
+    <string name="about_title">Über</string>
+    <string name="about_version">Version</string>
+    <string name="about_version_code">Versionscode</string>
+    <string name="about_commit">Commit</string>
+    <string name="about_commit_full">Commit (vollständig)</string>
+    <string name="about_commit_dirty">%1$s (dirty)</string>
+    <string name="about_build_type">Build-Typ</string>
+    <string name="about_acknowledgements">Danksagung: hydrus.pl — Daten für den Modellkatalog; vielen Dank für die Erlaubnis zur Nutzung der Datenbank.</string>
 </resources>

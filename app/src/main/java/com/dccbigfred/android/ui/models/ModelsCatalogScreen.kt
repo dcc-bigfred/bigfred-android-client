@@ -2,6 +2,7 @@ package com.dccbigfred.android.ui.models
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -71,19 +74,37 @@ private val ThumbSize = 48.dp
 @Composable
 fun ModelsCatalogScreen(
     onBack: () -> Unit,
+    pickerMode: Boolean = false,
+    onModelPicked: ((ModelRow) -> Unit)? = null,
+    onCancel: (() -> Unit)? = null,
     viewModel: ModelsCatalogViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filtersExpanded by remember { mutableStateOf(false) }
+    var selectedRow by remember { mutableStateOf<ModelRow?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.models_title)) },
+                title = {
+                    Text(
+                        stringResource(
+                            if (pickerMode) R.string.models_pick_title else R.string.models_title,
+                        ),
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (pickerMode) {
+                                onCancel?.invoke() ?: onBack()
+                            } else {
+                                onBack()
+                            }
+                        },
+                    ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                            if (pickerMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back),
                         )
                     }
@@ -97,6 +118,22 @@ fun ModelsCatalogScreen(
                     }
                 },
             )
+        },
+        bottomBar = {
+            if (pickerMode) {
+                Button(
+                    onClick = {
+                        val row = selectedRow ?: return@Button
+                        onModelPicked?.invoke(row)
+                    },
+                    enabled = selectedRow != null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                ) {
+                    Text(stringResource(R.string.models_select))
+                }
+            }
         },
     ) { padding ->
         Column(
@@ -133,6 +170,12 @@ fun ModelsCatalogScreen(
                     ModelsTable(
                         rows = state.page.rows,
                         loading = state.loading,
+                        selectedId = if (pickerMode) selectedRow?.id else null,
+                        onRowClick = if (pickerMode) {
+                            { row -> selectedRow = row }
+                        } else {
+                            null
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
@@ -360,6 +403,8 @@ private fun ScaleDropdown(
 private fun ModelsTable(
     rows: List<ModelRow>,
     loading: Boolean,
+    selectedId: Long?,
+    onRowClick: ((ModelRow) -> Unit)?,
     onPageSizeChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -409,7 +454,11 @@ private fun ModelsTable(
                     .horizontalScroll(hScroll),
             ) {
                 rows.forEach { row ->
-                    ModelTableRow(row)
+                    ModelTableRow(
+                        row = row,
+                        selected = selectedId == row.id,
+                        onClick = onRowClick?.let { cb -> { cb(row) } },
+                    )
                 }
             }
             if (loading) {
@@ -440,11 +489,29 @@ private fun HeaderCell(text: String, width: Dp) {
 }
 
 @Composable
-private fun ModelTableRow(row: ModelRow) {
+private fun ModelTableRow(
+    row: ModelRow,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
             .height(RowHeight)
+            .then(
+                if (selected) {
+                    Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
             .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

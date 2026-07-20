@@ -13,11 +13,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +27,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.dccbigfred.android.BuildConfig
+import com.dccbigfred.android.locale.LocalePrefs
+import com.dccbigfred.android.models.ModelPickPayload
+import com.dccbigfred.android.ui.models.ModelsCatalogScreen
+import org.json.JSONObject
 
 /**
  * Hosts the BigFred SPA. Timers and the WebSocket keepalive (2s ping) must keep
@@ -44,6 +51,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 @Composable
 fun BigFredWebViewScreen(
     baseUrl: String,
+    onWebViewReady: ((WebView?) -> Unit)? = null,
 ) {
     // Freeze the URL for this WebView session so DataStore / nav recompositions
     // with the same address do not trigger a reload (which would churn the WS).
@@ -51,9 +59,16 @@ fun BigFredWebViewScreen(
     var webView by remember { mutableStateOf<KeepAliveWebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
+    var pickerVisible by remember { mutableStateOf(false) }
+    val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
+    val onReady by rememberUpdatedState(onWebViewReady)
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    BackHandler(enabled = canGoBack) {
+    BackHandler(enabled = pickerVisible) {
+        deliverModelPickResult(webView, null)
+        pickerVisible = false
+    }
+    BackHandler(enabled = !pickerVisible && canGoBack) {
         webView?.goBack()
     }
 
@@ -95,6 +110,7 @@ fun BigFredWebViewScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            onReady?.invoke(null)
             webView?.apply {
                 keepWindowVisible = false
                 stopLoading()
@@ -108,8 +124,8 @@ fun BigFredWebViewScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
-            factory = { context ->
-                KeepAliveWebView(context).apply {
+            factory = { ctx ->
+                KeepAliveWebView(ctx).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -129,9 +145,20 @@ fun BigFredWebViewScreen(
                         // Keep rasterizing when briefly covered (drawer scrim /
                         // Compose overlays) so timers are less likely to throttle.
                         setOffscreenPreRaster(true)
+                        userAgentString =
+                            "$userAgentString BigFredNativeApp/${BuildConfig.VERSION_NAME}"
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
+                    // openModelPicker runs on the binder thread — post to main.
+                    addJavascriptInterface(
+                        BigFredJsBridge(
+                            onOpenModelPicker = {
+                                post { openPicker() }
+                            },
+                        ),
+                        "BigFredNativeApp",
+                    )
                     webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(
@@ -146,6 +173,7 @@ fun BigFredWebViewScreen(
                             loading = false
                             canGoBack = view.canGoBack()
                             view.requestFocus()
+                            applyLocaleToWebView(view, LocalePrefs.resolvedWebLocale())
                         }
 
                         override fun onPageStarted(
@@ -168,6 +196,7 @@ fun BigFredWebViewScreen(
                     tag = sessionUrl
                     loadUrl(sessionUrl)
                     webView = this
+                    onReady?.invoke(this)
                     requestFocus()
                 }
             },
@@ -183,6 +212,58 @@ fun BigFredWebViewScreen(
         if (loading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         }
+        if (pickerVisible) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                ModelsCatalogScreen(
+                    onBack = {
+                        deliverModelPickResult(webView, null)
+                        pickerVisible = false
+                    },
+                    pickerMode = true,
+                    onModelPicked = { row ->
+                        deliverModelPickResult(webView, ModelPickPayload.fromRow(row))
+                        pickerVisible = false
+                    },
+                    onCancel = {
+                        deliverModelPickResult(webView, null)
+                        pickerVisible = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Push locale into the SPA without reloading (localStorage + i18n). */
+fun applyLocaleToWebView(webView: WebView?, lang: String) {
+    val view = webView ?: return
+    val quoted = JSONObject.quote(lang)
+    val script =
+        """
+        (function(lang){
+          try { localStorage.setItem('bigfred.locale', lang); } catch(e) {}
+          if (typeof window.__bigfredSetLocale === 'function') {
+            window.__bigfredSetLocale(lang);
+          }
+        })($quoted);
+        """.trimIndent()
+    view.post {
+        view.evaluateJavascript(script, null)
+    }
+}
+
+private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?) {
+    val view = webView ?: return
+    val arg = if (payload == null) {
+        "null"
+    } else {
+        payload.toJson()
+    }
+    // $arg is already JSON (or "null") from org.json — safe to interpolate as-is.
+    val script =
+        "(function(){var r=window.__bigfredOnModelPicked;if(typeof r==='function'){r($arg);}})();"
+    view.post {
+        view.evaluateJavascript(script, null)
     }
 }
 
