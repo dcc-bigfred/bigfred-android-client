@@ -244,8 +244,6 @@ fun applyLocaleToWebView(webView: WebView?, lang: String) {
           try { localStorage.setItem('bigfred.locale', lang); } catch(e) {}
           if (typeof window.__bigfredSetLocale === 'function') {
             window.__bigfredSetLocale(lang);
-          } else if (window.i18n && typeof window.i18n.changeLanguage === 'function') {
-            window.i18n.changeLanguage(lang);
           }
         })($quoted);
         """.trimIndent()
@@ -261,9 +259,9 @@ private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?
     } else {
         payload.toJson()
     }
+    // $arg is already JSON (or "null") from org.json — safe to interpolate as-is.
     val script =
         "(function(){var r=window.__bigfredOnModelPicked;if(typeof r==='function'){r($arg);}})();"
-            .replace("\$arg", arg)
     view.post {
         view.evaluateJavascript(script, null)
     }
