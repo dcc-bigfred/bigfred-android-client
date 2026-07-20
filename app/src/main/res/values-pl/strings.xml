@@ -11,6 +11,38 @@
     <string name="menu_settings">Ustawienia</string>
     <string name="menu_connection_status">Stan połączenia</string>
     <string name="menu_find_server">Wyszukaj serwer</string>
+    <string name="menu_models">Baza modeli</string>
+
+    <!-- Models catalog -->
+    <string name="models_title">Baza modeli</string>
+    <string name="models_filters">Filtry</string>
+    <string name="models_filters_clear">Wyczyść filtry</string>
+    <string name="models_filter_search">Szukaj</string>
+    <string name="models_filter_manufacturer">Producent</string>
+    <string name="models_filter_epoch">Epoka</string>
+    <string name="models_filter_revision_from">Rewizja od</string>
+    <string name="models_filter_revision_to">Rewizja do</string>
+    <string name="models_filter_carrier">Przewoźnik</string>
+    <string name="models_filter_vehicle_kind">Rodzaj pojazdu</string>
+    <string name="models_filter_scale">Skala</string>
+    <string name="models_filter_scale_all">Wszystkie skale</string>
+    <string name="models_empty">Brak modeli dla wybranych filtrów</string>
+    <string name="models_page_prev">Poprzednia strona</string>
+    <string name="models_page_next">Następna strona</string>
+    <string name="models_page_status">Strona %1$d / %2$d (%3$d łącznie)</string>
+    <string name="models_col_image">Obrazek</string>
+    <string name="models_col_manufacturer">Producent</string>
+    <string name="models_col_catalog">Nr katalogowy</string>
+    <string name="models_col_scale">Skala</string>
+    <string name="models_col_release">Data wydania</string>
+    <string name="models_col_vehicle_kind">Rodzaj</string>
+    <string name="models_col_type">Typ</string>
+    <string name="models_col_vehicle_number">Numer pojazdu</string>
+    <string name="models_col_carrier">Przewoźnik</string>
+    <string name="models_col_assignment">Przydział</string>
+    <string name="models_col_revision">Rewizja</string>
+    <string name="models_col_epoch">Epoka</string>
+    <string name="models_col_livery">Malowanie</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Wybierz serwer BigFred</string>

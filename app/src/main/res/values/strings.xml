@@ -11,6 +11,38 @@
     <string name="menu_settings">Settings</string>
     <string name="menu_connection_status">Connection status</string>
     <string name="menu_find_server">Find server</string>
+    <string name="menu_models">Model catalog</string>
+
+    <!-- Models catalog -->
+    <string name="models_title">Model catalog</string>
+    <string name="models_filters">Filters</string>
+    <string name="models_filters_clear">Clear filters</string>
+    <string name="models_filter_search">Search</string>
+    <string name="models_filter_manufacturer">Manufacturer</string>
+    <string name="models_filter_epoch">Epoch</string>
+    <string name="models_filter_revision_from">Revision from</string>
+    <string name="models_filter_revision_to">Revision to</string>
+    <string name="models_filter_carrier">Carrier</string>
+    <string name="models_filter_vehicle_kind">Vehicle kind</string>
+    <string name="models_filter_scale">Scale</string>
+    <string name="models_filter_scale_all">All scales</string>
+    <string name="models_empty">No models match the filters</string>
+    <string name="models_page_prev">Previous page</string>
+    <string name="models_page_next">Next page</string>
+    <string name="models_page_status">Page %1$d / %2$d (%3$d total)</string>
+    <string name="models_col_image">Image</string>
+    <string name="models_col_manufacturer">Manufacturer</string>
+    <string name="models_col_catalog">Catalog no.</string>
+    <string name="models_col_scale">Scale</string>
+    <string name="models_col_release">Release</string>
+    <string name="models_col_vehicle_kind">Kind</string>
+    <string name="models_col_type">Type</string>
+    <string name="models_col_vehicle_number">Vehicle no.</string>
+    <string name="models_col_carrier">Carrier</string>
+    <string name="models_col_assignment">Assignment</string>
+    <string name="models_col_revision">Revision</string>
+    <string name="models_col_epoch">Epoch</string>
+    <string name="models_col_livery">Livery</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>

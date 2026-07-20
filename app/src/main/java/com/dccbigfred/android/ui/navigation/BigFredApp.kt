@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsRailway
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -45,6 +46,7 @@ import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
+import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
@@ -128,6 +130,19 @@ fun BigFredApp() {
                         scope.launch {
                             drawerState.close()
                             navController.navigate(Routes.SETTINGS) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_models)) },
+                    selected = currentRoute == Routes.MODELS,
+                    icon = { Icon(Icons.Default.DirectionsRailway, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.MODELS) {
                                 launchSingleTop = true
                             }
                         }
@@ -233,6 +248,11 @@ fun BigFredApp() {
                     ConnectionStatusScreen(
                         serverUrl = url,
                         wifiLockHeld = wifiLockHeld,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.MODELS) {
+                    ModelsCatalogScreen(
                         onBack = { navController.popBackStack() },
                     )
                 }

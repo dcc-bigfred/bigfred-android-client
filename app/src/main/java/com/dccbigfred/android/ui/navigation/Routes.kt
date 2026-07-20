@@ -6,4 +6,5 @@ object Routes {
     const val WEBVIEW = "webview"
     const val SETTINGS = "settings"
     const val CONNECTION = "connection"
+    const val MODELS = "models"
 }
