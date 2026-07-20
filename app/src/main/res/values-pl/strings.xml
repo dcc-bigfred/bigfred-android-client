@@ -8,6 +8,7 @@
     <string name="refresh">Odśwież</string>
 
     <!-- Drawer -->
+    <string name="menu_app">Aplikacja BigFred</string>
     <string name="menu_settings">Ustawienia</string>
     <string name="menu_connection_status">Stan połączenia</string>
     <string name="menu_find_server">Wyszukaj serwer</string>
@@ -96,4 +97,5 @@
     <string name="about_commit_full">Commit (pełny)</string>
     <string name="about_commit_dirty">%1$s (dirty)</string>
     <string name="about_build_type">Typ buildu</string>
+    <string name="about_acknowledgements">Podziękowania: hydrus.pl - dane do bazy modeli, dziękujemy za zgodę na skorzystanie z bazy danych</string>
 </resources>

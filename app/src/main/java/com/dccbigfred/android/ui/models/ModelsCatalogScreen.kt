@@ -81,8 +81,7 @@ fun ModelsCatalogScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filtersExpanded by remember { mutableStateOf(false) }
-    var selectedId by remember { mutableStateOf<Long?>(null) }
-    val selectedRow = state.page.rows.find { it.id == selectedId }
+    var selectedRow by remember { mutableStateOf<ModelRow?>(null) }
 
     Scaffold(
         topBar = {
@@ -171,9 +170,9 @@ fun ModelsCatalogScreen(
                     ModelsTable(
                         rows = state.page.rows,
                         loading = state.loading,
-                        selectedId = if (pickerMode) selectedId else null,
+                        selectedId = if (pickerMode) selectedRow?.id else null,
                         onRowClick = if (pickerMode) {
-                            { row -> selectedId = row.id }
+                            { row -> selectedRow = row }
                         } else {
                             null
                         },

@@ -28,8 +28,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dccbigfred.android.BuildConfig
+import com.dccbigfred.android.locale.LocalePrefs
 import com.dccbigfred.android.models.ModelPickPayload
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
+import org.json.JSONObject
 
 /**
  * Hosts the BigFred SPA. Timers and the WebSocket keepalive (2s ping) must keep
@@ -49,6 +51,7 @@ import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 @Composable
 fun BigFredWebViewScreen(
     baseUrl: String,
+    onWebViewReady: ((WebView?) -> Unit)? = null,
 ) {
     // Freeze the URL for this WebView session so DataStore / nav recompositions
     // with the same address do not trigger a reload (which would churn the WS).
@@ -58,6 +61,7 @@ fun BigFredWebViewScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var pickerVisible by remember { mutableStateOf(false) }
     val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
+    val onReady by rememberUpdatedState(onWebViewReady)
     val lifecycleOwner = LocalLifecycleOwner.current
 
     BackHandler(enabled = pickerVisible) {
@@ -106,6 +110,7 @@ fun BigFredWebViewScreen(
 
     DisposableEffect(Unit) {
         onDispose {
+            onReady?.invoke(null)
             webView?.apply {
                 keepWindowVisible = false
                 stopLoading()
@@ -141,7 +146,7 @@ fun BigFredWebViewScreen(
                         // Compose overlays) so timers are less likely to throttle.
                         setOffscreenPreRaster(true)
                         userAgentString =
-                            "$userAgentString BigFredAndroid/${BuildConfig.VERSION_NAME}"
+                            "$userAgentString BigFredNativeApp/${BuildConfig.VERSION_NAME}"
                     }
                     isFocusable = true
                     isFocusableInTouchMode = true
@@ -152,7 +157,7 @@ fun BigFredWebViewScreen(
                                 post { openPicker() }
                             },
                         ),
-                        "BigFredAndroid",
+                        "BigFredNativeApp",
                     )
                     webChromeClient = WebChromeClient()
                     webViewClient = object : WebViewClient() {
@@ -168,6 +173,7 @@ fun BigFredWebViewScreen(
                             loading = false
                             canGoBack = view.canGoBack()
                             view.requestFocus()
+                            applyLocaleToWebView(view, LocalePrefs.resolvedWebLocale())
                         }
 
                         override fun onPageStarted(
@@ -190,6 +196,7 @@ fun BigFredWebViewScreen(
                     tag = sessionUrl
                     loadUrl(sessionUrl)
                     webView = this
+                    onReady?.invoke(this)
                     requestFocus()
                 }
             },
@@ -227,13 +234,31 @@ fun BigFredWebViewScreen(
     }
 }
 
+/** Push locale into the SPA without reloading (localStorage + i18n). */
+fun applyLocaleToWebView(webView: WebView?, lang: String) {
+    val view = webView ?: return
+    val quoted = JSONObject.quote(lang)
+    val script =
+        """
+        (function(lang){
+          try { localStorage.setItem('bigfred.locale', lang); } catch(e) {}
+          if (typeof window.__bigfredSetLocale === 'function') {
+            window.__bigfredSetLocale(lang);
+          } else if (window.i18n && typeof window.i18n.changeLanguage === 'function') {
+            window.i18n.changeLanguage(lang);
+          }
+        })($quoted);
+        """.trimIndent()
+    view.post {
+        view.evaluateJavascript(script, null)
+    }
+}
+
 private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?) {
     val view = webView ?: return
     val arg = if (payload == null) {
         "null"
     } else {
-        // JSONObject string is already JSON; quote for JS string then parse,
-        // or embed as raw object literal via JSONObject.toString().
         payload.toJson()
     }
     val script =

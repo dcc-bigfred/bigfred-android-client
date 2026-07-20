@@ -89,6 +89,15 @@ fun AboutScreen(
                 label = stringResource(R.string.about_build_type),
                 value = BuildConfig.BUILD_TYPE,
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.about_acknowledgements),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

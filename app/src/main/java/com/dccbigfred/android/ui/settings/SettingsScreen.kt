@@ -64,6 +64,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onSaved: (String) -> Unit,
     onSearchAgain: () -> Unit,
+    onLocaleChanged: (() -> Unit)? = null,
 ) {
     var urlInput by remember(currentUrl) { mutableStateOf(currentUrl.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -131,6 +132,7 @@ fun SettingsScreen(
                     onSelect = {
                         selectedLanguage = AppLanguage.SYSTEM
                         applyAppLanguage(AppLanguage.SYSTEM)
+                        onLocaleChanged?.invoke()
                     },
                 )
                 LanguageOption(
@@ -139,6 +141,7 @@ fun SettingsScreen(
                     onSelect = {
                         selectedLanguage = AppLanguage.POLISH
                         applyAppLanguage(AppLanguage.POLISH)
+                        onLocaleChanged?.invoke()
                     },
                 )
                 LanguageOption(
@@ -147,6 +150,7 @@ fun SettingsScreen(
                     onSelect = {
                         selectedLanguage = AppLanguage.ENGLISH
                         applyAppLanguage(AppLanguage.ENGLISH)
+                        onLocaleChanged?.invoke()
                     },
                 )
                 LanguageOption(
@@ -155,6 +159,7 @@ fun SettingsScreen(
                     onSelect = {
                         selectedLanguage = AppLanguage.GERMAN
                         applyAppLanguage(AppLanguage.GERMAN)
+                        onLocaleChanged?.invoke()
                     },
                 )
             }
