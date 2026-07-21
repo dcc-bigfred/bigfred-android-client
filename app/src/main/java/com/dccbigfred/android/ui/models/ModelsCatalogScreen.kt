@@ -73,10 +73,8 @@ import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.models.ModelSortColumn
+import android.app.SearchManager
 import android.content.Intent
-import android.net.Uri
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import kotlin.math.floor
 import kotlin.math.max
 import kotlinx.coroutines.launch
@@ -84,11 +82,13 @@ import kotlinx.coroutines.launch
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
 
-private fun openGoogleSearch(context: android.content.Context, query: String) {
+/** Opens the device’s preferred web search handler (ACTION_WEB_SEARCH). */
+private fun openWebSearch(context: android.content.Context, query: String) {
     val q = query.trim()
     if (q.isEmpty()) return
-    val encoded = URLEncoder.encode(q, StandardCharsets.UTF_8.toString())
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$encoded"))
+    val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+        putExtra(SearchManager.QUERY, q)
+    }
     context.startActivity(intent)
 }
 
@@ -617,10 +617,10 @@ private fun ModelsTable(
                                 }
                                 val vehicleNumber = row.vehicleNumber?.trim().orEmpty()
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.models_search_vehicle_number_google)) },
+                                    text = { Text(stringResource(R.string.models_search_vehicle_number)) },
                                     enabled = vehicleNumber.isNotEmpty(),
                                     onClick = {
-                                        openGoogleSearch(context, vehicleNumber)
+                                        openWebSearch(context, vehicleNumber)
                                         onMenuChange(null)
                                     },
                                 )
@@ -629,10 +629,10 @@ private fun ModelsTable(
                                     .filter { it.isNotEmpty() }
                                     .joinToString(" ")
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.models_search_model_google)) },
+                                    text = { Text(stringResource(R.string.models_search_model)) },
                                     enabled = modelQuery.isNotEmpty(),
                                     onClick = {
-                                        openGoogleSearch(context, modelQuery)
+                                        openWebSearch(context, modelQuery)
                                         onMenuChange(null)
                                     },
                                 )
