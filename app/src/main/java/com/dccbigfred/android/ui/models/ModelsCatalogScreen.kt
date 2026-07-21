@@ -649,7 +649,9 @@ private fun ModelsTable(
             if (!loading && rows.isEmpty()) {
                 Text(
                     stringResource(R.string.models_empty),
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(15.dp),
                 )
             }
         }

@@ -408,7 +408,9 @@ private fun MyVehiclesTable(
             if (rows.isEmpty()) {
                 Text(
                     stringResource(R.string.my_vehicles_empty),
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(15.dp),
                 )
             }
         }

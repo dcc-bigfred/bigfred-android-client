@@ -15,6 +15,9 @@
     <string name="menu_models">Model catalog</string>
     <string name="menu_my_vehicles">My vehicles on phone</string>
     <string name="menu_about">About</string>
+    <string name="menu_os_management">OS management</string>
+    <string name="menu_monitoring">Monitoring</string>
+    <string name="menu_logout">Log out from server</string>
 
     <!-- Models catalog -->
     <string name="models_title">Model catalog</string>
@@ -117,6 +120,10 @@
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_german">Deutsch</string>
+    <string name="settings_theme_section">Theme</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_server_hint">BigFred address (e.g. http://bigfred.local:8080 or http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">Server URL</string>

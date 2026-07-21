@@ -171,6 +171,7 @@ fun DiscoveryScreen(
                             Text(
                                 text = stringResource(R.string.discovery_empty),
                                 style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(15.dp),
                             )
                         }
                     }

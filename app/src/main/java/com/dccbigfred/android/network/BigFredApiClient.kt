@@ -59,11 +59,44 @@ class BigFredApiClient(
         }
     }
 
+    /**
+     * POST /api/v1/auth/logout (best-effort), then drop the WebView session cookie.
+     * Idempotent when already logged out or offline.
+     */
+    suspend fun logout(baseUrl: String? = null) = withContext(Dispatchers.IO) {
+        val url = (baseUrl ?: serverPreferences.serverBaseUrl.first())
+            ?.trimEnd('/')
+            ?: return@withContext
+
+        val cookie = sessionCookie(url)
+        if (cookie != null) {
+            val req = Request.Builder()
+                .url("$url/api/v1/auth/logout")
+                .header("Cookie", cookie)
+                .post(ByteArray(0).toRequestBody(null))
+                .build()
+            try {
+                client.newCall(req).execute().close()
+            } catch (_: Exception) {
+                // Still clear local cookies below.
+            }
+        }
+        clearSessionCookie(url)
+    }
+
     private fun sessionCookie(baseUrl: String): String? {
         return CookieManager.getInstance().getCookie(baseUrl)
             ?.split(";")
             ?.map { it.trim() }
             ?.firstOrNull { it.startsWith("bigfred_session=") }
+    }
+
+    private fun clearSessionCookie(baseUrl: String) {
+        val cm = CookieManager.getInstance()
+        // Expire the HttpOnly session cookie for this origin (WebView jar).
+        cm.setCookie(baseUrl, "bigfred_session=; Max-Age=0; Path=/")
+        cm.setCookie("$baseUrl/", "bigfred_session=; Max-Age=0; Path=/")
+        cm.flush()
     }
 
     private fun parseErrorCode(body: String?, httpCode: Int): String {

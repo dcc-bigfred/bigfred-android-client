@@ -15,6 +15,9 @@
     <string name="menu_models">Baza modeli</string>
     <string name="menu_my_vehicles">Moje pojazdy na telefonie</string>
     <string name="menu_about">O aplikacji</string>
+    <string name="menu_os_management">Zarządzanie OS</string>
+    <string name="menu_monitoring">Monitoring</string>
+    <string name="menu_logout">Wyloguj z serwera</string>
 
     <!-- Models catalog -->
     <string name="models_title">Baza modeli</string>
@@ -117,6 +120,10 @@
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_german">Deutsch</string>
+    <string name="settings_theme_section">Motyw</string>
+    <string name="settings_theme_system">Systemowy</string>
+    <string name="settings_theme_light">Jasny</string>
+    <string name="settings_theme_dark">Ciemny</string>
     <string name="settings_server_section">Serwer</string>
     <string name="settings_server_hint">Adres BigFred (np. http://bigfred.local:8080 lub http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">URL serwera</string>

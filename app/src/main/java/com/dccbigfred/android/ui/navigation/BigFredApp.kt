@@ -1,14 +1,24 @@
 package com.dccbigfred.android.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DirectionsRailway
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -18,10 +28,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -36,8 +49,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -50,6 +65,8 @@ import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
+import com.dccbigfred.android.network.CompanionServiceProbe
+import com.dccbigfred.android.network.CompanionServices
 import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
@@ -62,8 +79,11 @@ import com.dccbigfred.android.ui.webview.applyLocaleToWebView
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
 import kotlinx.coroutines.launch
 
-/** Only this strip at the physical left edge can start an open gesture. */
+/** Hit target / drag strip at the physical left edge. */
 private val DrawerOpenEdgeWidth = 28.dp
+/** Visible tab peeking from the left edge (outside WebView). */
+private val DrawerHandleWidth = 14.dp
+private val DrawerHandleHeight = 56.dp
 private const val DrawerOpenDragThresholdPx = 40f
 
 @Composable
@@ -76,10 +96,12 @@ fun BigFredApp() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val wifiLock = remember { LowLatencyWifiLock(context) }
+    val companionProbe = remember { CompanionServiceProbe() }
 
     var bootstrapped by remember { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
     var spaWebView by remember { mutableStateOf<WebView?>(null) }
+    var companionServices by remember { mutableStateOf(CompanionServices()) }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -94,6 +116,15 @@ fun BigFredApp() {
             popUpTo(Routes.BOOTSTRAP) { inclusive = true }
         }
         bootstrapped = true
+    }
+
+    LaunchedEffect(selectedServerUrl) {
+        val url = selectedServerUrl
+        if (url == null) {
+            companionServices = CompanionServices()
+            return@LaunchedEffect
+        }
+        companionServices = companionProbe.probe(url)
     }
 
     fun goToWebView(url: String) {
@@ -126,6 +157,31 @@ fun BigFredApp() {
         }
     }
 
+    fun openExternalUrl(url: String) {
+        scope.launch {
+            drawerState.close()
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url.trimEnd('/') + "/"))
+            context.startActivity(intent)
+        }
+    }
+
+    fun logoutFromServer() {
+        scope.launch {
+            drawerState.close()
+            val url = selectedServerUrl
+            if (url != null) {
+                app.bigFredApiClient.logout(url)
+            }
+            prefs.clearServerBaseUrl()
+            activeUrl = null
+            companionServices = CompanionServices()
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     val webViewVisible = currentRoute == Routes.WEBVIEW
     val webSessionUrl = selectedServerUrl
 
@@ -140,96 +196,145 @@ fun BigFredApp() {
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    modifier = Modifier.padding(16.dp),
-                )
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_app)) },
-                    selected = currentRoute == Routes.WEBVIEW,
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    onClick = { openBigFredApp() },
-                )
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_settings)) },
-                    selected = currentRoute == Routes.SETTINGS,
-                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(Routes.SETTINGS) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
-                )
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_models)) },
-                    selected = currentRoute == Routes.MODELS,
-                    icon = { Icon(Icons.Default.DirectionsRailway, contentDescription = null) },
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(Routes.MODELS) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
-                )
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_my_vehicles)) },
-                    selected = currentRoute == Routes.MY_VEHICLES,
-                    icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(Routes.MY_VEHICLES) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
-                )
-                if (selectedServerUrl != null) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        modifier = Modifier.padding(16.dp),
+                    )
                     NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.menu_connection_status)) },
-                        selected = currentRoute == Routes.CONNECTION,
-                        icon = { Icon(Icons.Default.NetworkCheck, contentDescription = null) },
+                        label = { Text(stringResource(R.string.menu_app)) },
+                        selected = currentRoute == Routes.WEBVIEW,
+                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        onClick = { openBigFredApp() },
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_settings)) },
+                        selected = currentRoute == Routes.SETTINGS,
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         onClick = {
                             scope.launch {
                                 drawerState.close()
-                                navController.navigate(Routes.CONNECTION) {
+                                navController.navigate(Routes.SETTINGS) {
                                     launchSingleTop = true
                                 }
                             }
                         },
                     )
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_models)) },
+                        selected = currentRoute == Routes.MODELS,
+                        icon = { Icon(Icons.Default.DirectionsRailway, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.MODELS) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_my_vehicles)) },
+                        selected = currentRoute == Routes.MY_VEHICLES,
+                        icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.MY_VEHICLES) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                    )
+                    if (selectedServerUrl != null) {
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_connection_status)) },
+                            selected = currentRoute == Routes.CONNECTION,
+                            icon = { Icon(Icons.Default.NetworkCheck, contentDescription = null) },
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    navController.navigate(Routes.CONNECTION) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_find_server)) },
+                        selected = currentRoute == Routes.DISCOVERY,
+                        icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.DISCOVERY) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.menu_about)) },
+                        selected = currentRoute == Routes.ABOUT,
+                        icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                navController.navigate(Routes.ABOUT) {
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (companionServices.anyAvailable || selectedServerUrl != null) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                    companionServices.osManagementUrl?.let { url ->
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_os_management)) },
+                            selected = false,
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_menu_os_management),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified,
+                                )
+                            },
+                            onClick = { openExternalUrl(url) },
+                        )
+                    }
+                    companionServices.monitoringUrl?.let { url ->
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_monitoring)) },
+                            selected = false,
+                            icon = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_menu_monitoring),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified,
+                                )
+                            },
+                            onClick = { openExternalUrl(url) },
+                        )
+                    }
+                    if (selectedServerUrl != null) {
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_logout)) },
+                            selected = false,
+                            icon = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { logoutFromServer() },
+                        )
+                    }
                 }
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_find_server)) },
-                    selected = currentRoute == Routes.DISCOVERY,
-                    icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(Routes.DISCOVERY) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
-                )
-                NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.menu_about)) },
-                    selected = currentRoute == Routes.ABOUT,
-                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
-                    onClick = {
-                        scope.launch {
-                            drawerState.close()
-                            navController.navigate(Routes.ABOUT) {
-                                launchSingleTop = true
-                            }
-                        }
-                    },
-                )
             }
         },
     ) {
@@ -348,6 +453,8 @@ fun BigFredApp() {
             if (drawerState.isClosed) {
                 LeftEdgeOpenHandle(
                     onOpen = { scope.launch { drawerState.open() } },
+                    // Visible tab outside WebView; on WebView keep an invisible drag strip.
+                    visible = !webViewVisible,
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .fillMaxHeight()
@@ -362,6 +469,7 @@ fun BigFredApp() {
 @Composable
 private fun LeftEdgeOpenHandle(
     onOpen: () -> Unit,
+    visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var dragged by remember { mutableFloatStateOf(0f) }
@@ -385,5 +493,31 @@ private fun LeftEdgeOpenHandle(
                 onDragCancel = { dragged = 0f },
             )
         },
-    )
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        if (visible) {
+            Surface(
+                modifier = Modifier
+                    .width(DrawerHandleWidth)
+                    .height(DrawerHandleHeight)
+                    .clickable(onClick = onOpen),
+                shape = RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp),
+                color = MaterialTheme.colorScheme.primary,
+                tonalElevation = 2.dp,
+                shadowElevation = 2.dp,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(R.string.menu),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
 }
