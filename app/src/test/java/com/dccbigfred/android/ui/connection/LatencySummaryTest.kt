@@ -1,0 +1,38 @@
+package com.dccbigfred.android.ui.connection
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class LatencySummaryTest {
+    @Test
+    fun from_empty_returnsNull() {
+        assertNull(LatencySummary.from(emptyList()))
+    }
+
+    @Test
+    fun from_singleValue_allEqual() {
+        val summary = LatencySummary.from(listOf(42L))!!
+        assertEquals(42L, summary.minMs)
+        assertEquals(42L, summary.p50Ms)
+        assertEquals(42L, summary.p99Ms)
+    }
+
+    @Test
+    fun from_knownSet_computesMinAndPercentiles() {
+        // 1..100 → min=1, p50=50.5→51 (linear), p99≈99.01→99
+        val values = (1L..100L).toList()
+        val summary = LatencySummary.from(values)!!
+        assertEquals(1L, summary.minMs)
+        assertEquals(51L, summary.p50Ms)
+        assertEquals(99L, summary.p99Ms)
+    }
+
+    @Test
+    fun latencyScaleMaxMs_roundsUpToTen() {
+        assertEquals(50L, latencyScaleMaxMs(emptyList()))
+        assertEquals(50L, latencyScaleMaxMs(listOf(12L)))
+        assertEquals(60L, latencyScaleMaxMs(listOf(51L)))
+        assertEquals(100L, latencyScaleMaxMs(listOf(91L, 100L)))
+    }
+}
