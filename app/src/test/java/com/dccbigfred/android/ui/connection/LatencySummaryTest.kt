@@ -15,16 +15,18 @@ class LatencySummaryTest {
         val summary = LatencySummary.from(listOf(42L))!!
         assertEquals(42L, summary.minMs)
         assertEquals(42L, summary.p50Ms)
+        assertEquals(42L, summary.p90Ms)
         assertEquals(42L, summary.p99Ms)
     }
 
     @Test
     fun from_knownSet_computesMinAndPercentiles() {
-        // 1..100 → min=1, p50=50.5→51 (linear), p99≈99.01→99
+        // 1..100 → min=1, p50→51, p90→90, p99→99 (linear rank)
         val values = (1L..100L).toList()
         val summary = LatencySummary.from(values)!!
         assertEquals(1L, summary.minMs)
         assertEquals(51L, summary.p50Ms)
+        assertEquals(90L, summary.p90Ms)
         assertEquals(99L, summary.p99Ms)
     }
 

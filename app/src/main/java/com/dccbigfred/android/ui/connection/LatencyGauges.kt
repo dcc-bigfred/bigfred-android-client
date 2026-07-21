@@ -31,7 +31,7 @@ fun LatencyGaugesRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         LatencyGauge(
             label = stringResource(R.string.connection_gauge_min),
@@ -42,6 +42,12 @@ fun LatencyGaugesRow(
         LatencyGauge(
             label = stringResource(R.string.connection_gauge_p50),
             valueMs = summary?.p50Ms,
+            maxMs = maxMs,
+            modifier = Modifier.weight(1f),
+        )
+        LatencyGauge(
+            label = stringResource(R.string.connection_gauge_p90),
+            valueMs = summary?.p90Ms,
             maxMs = maxMs,
             modifier = Modifier.weight(1f),
         )
@@ -78,11 +84,11 @@ fun LatencyGauge(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            modifier = Modifier.size(72.dp),
+            modifier = Modifier.size(64.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Canvas(modifier = Modifier.size(72.dp)) {
-                val stroke = 8.dp.toPx()
+            Canvas(modifier = Modifier.size(64.dp)) {
+                val stroke = 7.dp.toPx()
                 val diameter = size.minDimension - stroke
                 val topLeft = Offset(stroke / 2f, stroke / 2f)
                 val arcSize = Size(diameter, diameter)
@@ -110,7 +116,7 @@ fun LatencyGauge(
             }
             Text(
                 text = valueText,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 color = valueColor,

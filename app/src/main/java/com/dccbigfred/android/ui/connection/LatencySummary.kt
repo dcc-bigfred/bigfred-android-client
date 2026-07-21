@@ -5,6 +5,7 @@ import kotlin.math.roundToLong
 data class LatencySummary(
     val minMs: Long,
     val p50Ms: Long,
+    val p90Ms: Long,
     val p99Ms: Long,
 ) {
     companion object {
@@ -14,6 +15,7 @@ data class LatencySummary(
             return LatencySummary(
                 minMs = sorted.first(),
                 p50Ms = percentile(sorted, 0.50),
+                p90Ms = percentile(sorted, 0.90),
                 p99Ms = percentile(sorted, 0.99),
             )
         }
