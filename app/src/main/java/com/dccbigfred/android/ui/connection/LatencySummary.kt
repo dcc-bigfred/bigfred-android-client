@@ -32,8 +32,11 @@ internal fun percentile(sortedAscending: List<Long>, p: Double): Long {
     return (sortedAscending[lo] * (1.0 - frac) + sortedAscending[hi] * frac).roundToLong()
 }
 
-/** Chart / gauge Y scale matching [LatencyChart]: max(50, max) rounded up to 10 ms. */
+/**
+ * Chart / gauge Y scale: at least [LatencySlo.BAD_MS] so SLO lines fit,
+ * otherwise max sample, rounded up to 10 ms.
+ */
 fun latencyScaleMaxMs(values: List<Long>): Long {
-    val maxMs = maxOf(50L, values.maxOrNull() ?: 50L)
+    val maxMs = maxOf(LatencySlo.BAD_MS, values.maxOrNull() ?: LatencySlo.BAD_MS)
     return ((maxMs + 9) / 10) * 10
 }

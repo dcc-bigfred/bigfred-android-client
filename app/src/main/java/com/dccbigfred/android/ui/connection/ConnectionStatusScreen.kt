@@ -202,11 +202,8 @@ fun ConnectionStatusScreen(
                             modifier = Modifier.weight(0.65f),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.End,
-                            color = if (sample.latencyMs == null) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
+                            color = sample.latencyMs?.let { LatencySlo.colorFor(it) }
+                                ?: MaterialTheme.colorScheme.error,
                         )
                     }
                     HorizontalDivider()
@@ -313,6 +310,18 @@ private fun LatencyChart(
             strokeWidth = 2f,
         )
 
+        // SLO threshold lines (50 / 200 / 300 ms).
+        for (thresholdMs in LatencySlo.thresholdLinesMs) {
+            if (thresholdMs > yMaxMs) continue
+            val y = topPad + plotH * (1f - (thresholdMs.toFloat() / yMax).coerceIn(0f, 1f))
+            drawLine(
+                color = LatencySlo.colorForThreshold(thresholdMs),
+                start = Offset(leftPad, y),
+                end = Offset(leftPad + plotW, y),
+                strokeWidth = 2.dp.toPx(),
+            )
+        }
+
         if (samples.isEmpty()) return@Canvas
 
         val path = Path()
@@ -325,7 +334,11 @@ private fun LatencyChart(
             }
             val y = topPad + plotH * (1f - (ms.toFloat() / yMax).coerceIn(0f, 1f))
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(x, y))
+            drawCircle(
+                color = LatencySlo.colorFor(ms),
+                radius = 4.dp.toPx(),
+                center = Offset(x, y),
+            )
         }
         drawPath(
             path = path,

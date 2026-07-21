@@ -62,7 +62,9 @@ fun LatencyGauge(
     modifier: Modifier = Modifier,
 ) {
     val trackColor = MaterialTheme.colorScheme.outlineVariant
-    val progressColor = MaterialTheme.colorScheme.primary
+    val progressColor = valueMs?.let { LatencySlo.colorFor(it) } ?: MaterialTheme.colorScheme.primary
+    val valueColor = valueMs?.let { LatencySlo.colorFor(it) }
+        ?: MaterialTheme.colorScheme.onSurfaceVariant
     val valueText = valueMs?.let { stringResource(R.string.connection_latency_ms, it.toInt()) }
         ?: stringResource(R.string.connection_gauge_empty)
     val progress = if (valueMs != null && maxMs > 0) {
@@ -111,6 +113,7 @@ fun LatencyGauge(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
+                color = valueColor,
                 maxLines = 1,
             )
         }

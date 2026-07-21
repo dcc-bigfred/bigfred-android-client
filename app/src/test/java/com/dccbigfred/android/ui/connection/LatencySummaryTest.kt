@@ -29,10 +29,11 @@ class LatencySummaryTest {
     }
 
     @Test
-    fun latencyScaleMaxMs_roundsUpToTen() {
-        assertEquals(50L, latencyScaleMaxMs(emptyList()))
-        assertEquals(50L, latencyScaleMaxMs(listOf(12L)))
-        assertEquals(60L, latencyScaleMaxMs(listOf(51L)))
-        assertEquals(100L, latencyScaleMaxMs(listOf(91L, 100L)))
+    fun latencyScaleMaxMs_includesSloCeilingAndRoundsUp() {
+        assertEquals(300L, latencyScaleMaxMs(emptyList()))
+        assertEquals(300L, latencyScaleMaxMs(listOf(12L)))
+        assertEquals(300L, latencyScaleMaxMs(listOf(100L)))
+        assertEquals(310L, latencyScaleMaxMs(listOf(301L)))
+        assertEquals(400L, latencyScaleMaxMs(listOf(391L, 400L)))
     }
 }
