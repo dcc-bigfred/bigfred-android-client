@@ -18,6 +18,10 @@ data class CompanionServices(
 
 /**
  * Detects companion UIs on the BigFred host: OS management (:8090) and Monitoring (:3333).
+ *
+ * Reachability: TCP/HTTP answers with 2xx–3xx, or auth challenges (401/403).
+ * A bare 404 on `/` is treated as absent so a closed/wrong service does not
+ * show a menu entry.
  */
 class CompanionServiceProbe(
     private val client: OkHttpClient = defaultClient(),
@@ -39,8 +43,8 @@ class CompanionServiceProbe(
                 .header("Connection", "close")
                 .build()
             client.newCall(request).execute().use { response ->
-                // Any HTTP response means the port is open (auth pages often return 401/302).
-                response.code in 200..499
+                val code = response.code
+                code in 200..399 || code == 401 || code == 403
             }
         } catch (_: Exception) {
             false

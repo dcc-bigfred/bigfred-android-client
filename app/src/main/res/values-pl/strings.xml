@@ -18,6 +18,7 @@
     <string name="menu_os_management">Zarządzanie OS</string>
     <string name="menu_monitoring">Monitoring</string>
     <string name="menu_logout">Wyloguj z serwera</string>
+    <string name="menu_open_external_failed">Brak aplikacji do otwarcia tego linku</string>
 
     <!-- Models catalog -->
     <string name="models_title">Baza modeli</string>

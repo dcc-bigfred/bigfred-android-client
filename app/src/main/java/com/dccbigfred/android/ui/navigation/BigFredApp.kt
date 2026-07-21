@@ -1,9 +1,12 @@
 package com.dccbigfred.android.ui.navigation
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -46,10 +49,10 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -106,6 +109,7 @@ fun BigFredApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val selectedServerUrl = activeUrl ?: savedUrl
+    val selectedServerUrlLatest by rememberUpdatedState(selectedServerUrl)
 
     fun pushLocaleToSpa() {
         applyLocaleToWebView(spaWebView, LocalePrefs.resolvedWebLocale())
@@ -124,7 +128,11 @@ fun BigFredApp() {
             companionServices = CompanionServices()
             return@LaunchedEffect
         }
-        companionServices = companionProbe.probe(url)
+        val probed = companionProbe.probe(url)
+        // Drop stale results if the user switched servers while probing.
+        if (selectedServerUrlLatest == url) {
+            companionServices = probed
+        }
     }
 
     fun goToWebView(url: String) {
@@ -161,7 +169,23 @@ fun BigFredApp() {
         scope.launch {
             drawerState.close()
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url.trimEnd('/') + "/"))
-            context.startActivity(intent)
+            if (intent.resolveActivity(context.packageManager) == null) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.menu_open_external_failed),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                return@launch
+            }
+            try {
+                context.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.menu_open_external_failed),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
         }
     }
 
@@ -296,11 +320,10 @@ fun BigFredApp() {
                             label = { Text(stringResource(R.string.menu_os_management)) },
                             selected = false,
                             icon = {
-                                Icon(
+                                Image(
                                     painter = painterResource(R.drawable.ic_menu_os_management),
                                     contentDescription = null,
                                     modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified,
                                 )
                             },
                             onClick = { openExternalUrl(url) },
@@ -311,11 +334,10 @@ fun BigFredApp() {
                             label = { Text(stringResource(R.string.menu_monitoring)) },
                             selected = false,
                             icon = {
-                                Icon(
+                                Image(
                                     painter = painterResource(R.drawable.ic_menu_monitoring),
                                     contentDescription = null,
                                     modifier = Modifier.size(24.dp),
-                                    tint = Color.Unspecified,
                                 )
                             },
                             onClick = { openExternalUrl(url) },

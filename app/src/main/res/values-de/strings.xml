@@ -18,6 +18,7 @@
     <string name="menu_os_management">OS-Verwaltung</string>
     <string name="menu_monitoring">Monitoring</string>
     <string name="menu_logout">Vom Server abmelden</string>
+    <string name="menu_open_external_failed">Keine App zum Öffnen dieses Links verfügbar</string>
 
     <!-- Models catalog -->
     <string name="models_title">Modellkatalog</string>

@@ -18,6 +18,7 @@
     <string name="menu_os_management">OS management</string>
     <string name="menu_monitoring">Monitoring</string>
     <string name="menu_logout">Log out from server</string>
+    <string name="menu_open_external_failed">No app available to open this link</string>
 
     <!-- Models catalog -->
     <string name="models_title">Model catalog</string>
