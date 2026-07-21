@@ -92,6 +92,7 @@ fun MyVehiclesScreen(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var editing by remember { mutableStateOf<LocalVehicleEntity?>(null) }
+    var pendingDelete by remember { mutableStateOf<LocalVehicleEntity?>(null) }
     var menuForUuid by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -182,7 +183,7 @@ fun MyVehiclesScreen(
                 onMenuChange = { menuForUuid = it },
                 onToggleSelected = viewModel::toggleSelected,
                 onEdit = { editing = it },
-                onDelete = { viewModel.delete(it) },
+                onDelete = { pendingDelete = it },
                 onSync = { viewModel.sync(it) },
                 modifier = Modifier
                     .weight(1f)
@@ -199,6 +200,30 @@ fun MyVehiclesScreen(
             onSave = {
                 viewModel.save(it)
                 editing = null
+            },
+        )
+    }
+
+    pendingDelete?.let { entity ->
+        val label = entity.name.ifBlank { entity.number }.ifBlank { entity.uuid }
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(R.string.my_vehicles_delete_title)) },
+            text = { Text(stringResource(R.string.my_vehicles_delete_message, label)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.delete(entity)
+                        pendingDelete = null
+                    },
+                ) {
+                    Text(stringResource(R.string.my_vehicles_action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text(stringResource(R.string.my_vehicles_cancel))
+                }
             },
         )
     }

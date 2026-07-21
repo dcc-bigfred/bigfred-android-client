@@ -67,6 +67,8 @@
     <string name="my_vehicles_col_dcc">DCC-Adresse</string>
     <string name="my_vehicles_action_edit">Bearbeiten</string>
     <string name="my_vehicles_action_delete">Löschen</string>
+    <string name="my_vehicles_delete_title">Fahrzeug löschen?</string>
+    <string name="my_vehicles_delete_message">„%1$s“ aus Meine Fahrzeuge auf dem Telefon entfernen? Das Fahrzeug wird nicht aus BigFred gelöscht.</string>
     <string name="my_vehicles_action_sync">Mit BigFred synchronisieren</string>
     <string name="my_vehicles_dialog_add">Fahrzeug hinzufügen</string>
     <string name="my_vehicles_dialog_edit">Fahrzeug bearbeiten</string>

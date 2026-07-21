@@ -67,6 +67,8 @@
     <string name="my_vehicles_col_dcc">DCC address</string>
     <string name="my_vehicles_action_edit">Edit</string>
     <string name="my_vehicles_action_delete">Delete</string>
+    <string name="my_vehicles_delete_title">Delete vehicle?</string>
+    <string name="my_vehicles_delete_message">Remove “%1$s” from My vehicles on phone? This does not delete it from BigFred.</string>
     <string name="my_vehicles_action_sync">Sync to BigFred</string>
     <string name="my_vehicles_dialog_add">Add vehicle</string>
     <string name="my_vehicles_dialog_edit">Edit vehicle</string>
