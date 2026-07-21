@@ -13,6 +13,7 @@
     <string name="menu_connection_status">Connection status</string>
     <string name="menu_find_server">Find server</string>
     <string name="menu_models">Model catalog</string>
+    <string name="menu_my_vehicles">My vehicles on phone</string>
     <string name="menu_about">About</string>
 
     <!-- Models catalog -->
@@ -47,6 +48,36 @@
     <string name="models_col_revision">Revision</string>
     <string name="models_col_epoch">Epoch</string>
     <string name="models_col_livery">Livery</string>
+    <string name="models_add_to_my_vehicles">Add to my vehicles</string>
+    <string name="models_added_to_my_vehicles">Added to my vehicles on phone</string>
+
+    <!-- My vehicles on phone -->
+    <string name="my_vehicles_title">My vehicles on phone</string>
+    <string name="my_vehicles_description">Build your rolling stock list anywhere, then sync it to BigFred at any layout event instead of typing every vehicle on site.</string>
+    <string name="my_vehicles_empty">No vehicles yet — add one or long-press a row in the model catalog</string>
+    <string name="my_vehicles_add">Add vehicle</string>
+    <string name="my_vehicles_col_icon">Icon</string>
+    <string name="my_vehicles_col_name">Name</string>
+    <string name="my_vehicles_col_kind">Vehicle type</string>
+    <string name="my_vehicles_col_number">Number</string>
+    <string name="my_vehicles_col_carrier">Carrier</string>
+    <string name="my_vehicles_col_assignment">Assignment</string>
+    <string name="my_vehicles_col_revision">Revision</string>
+    <string name="my_vehicles_col_epoch">Epoch</string>
+    <string name="my_vehicles_col_dcc">DCC address</string>
+    <string name="my_vehicles_action_edit">Edit</string>
+    <string name="my_vehicles_action_delete">Delete</string>
+    <string name="my_vehicles_action_sync">Sync to BigFred</string>
+    <string name="my_vehicles_dialog_add">Add vehicle</string>
+    <string name="my_vehicles_dialog_edit">Edit vehicle</string>
+    <string name="my_vehicles_pick_icon">Choose icon</string>
+    <string name="my_vehicles_clear_icon">Clear icon</string>
+    <string name="my_vehicles_save">Save</string>
+    <string name="my_vehicles_cancel">Cancel</string>
+    <string name="my_vehicles_sync_ok">Synced to BigFred</string>
+    <string name="my_vehicles_sync_unauthorized">Log in to BigFred in the app first</string>
+    <string name="my_vehicles_sync_conflict">Sync conflict (e.g. DCC address already taken)</string>
+    <string name="my_vehicles_sync_error">Sync failed</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>

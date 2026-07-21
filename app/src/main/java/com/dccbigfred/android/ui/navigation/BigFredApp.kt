@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.DirectionsRailway
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +55,8 @@ import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
+import com.dccbigfred.android.ui.myvehicles.MyVehiclesScreen
+import com.dccbigfred.android.ui.myvehicles.MyVehiclesViewModel
 import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
 import com.dccbigfred.android.ui.webview.applyLocaleToWebView
@@ -179,6 +182,19 @@ fun BigFredApp() {
                         scope.launch {
                             drawerState.close()
                             navController.navigate(Routes.MODELS) {
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                )
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.menu_my_vehicles)) },
+                    selected = currentRoute == Routes.MY_VEHICLES,
+                    icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            navController.navigate(Routes.MY_VEHICLES) {
                                 launchSingleTop = true
                             }
                         }
@@ -317,6 +333,19 @@ fun BigFredApp() {
                 }
                 composable(Routes.MODELS) {
                     ModelsCatalogScreen(
+                        onBack = { navController.popBackStack() },
+                        onAddToMyVehicles = { row ->
+                            scope.launch {
+                                val repo = app.localVehicleRepository
+                                repo.upsert(
+                                    MyVehiclesViewModel.fromModelRow(row, repo.newUuid()),
+                                )
+                            }
+                        },
+                    )
+                }
+                composable(Routes.MY_VEHICLES) {
+                    MyVehiclesScreen(
                         onBack = { navController.popBackStack() },
                     )
                 }

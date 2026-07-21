@@ -13,6 +13,7 @@
     <string name="menu_connection_status">Stan połączenia</string>
     <string name="menu_find_server">Wyszukaj serwer</string>
     <string name="menu_models">Baza modeli</string>
+    <string name="menu_my_vehicles">Moje pojazdy na telefonie</string>
     <string name="menu_about">O aplikacji</string>
 
     <!-- Models catalog -->
@@ -47,6 +48,36 @@
     <string name="models_col_revision">Rewizja</string>
     <string name="models_col_epoch">Epoka</string>
     <string name="models_col_livery">Malowanie</string>
+    <string name="models_add_to_my_vehicles">Dodaj do moich pojazdów</string>
+    <string name="models_added_to_my_vehicles">Dodano do moich pojazdów na telefonie</string>
+
+    <!-- My vehicles on phone -->
+    <string name="my_vehicles_title">Moje pojazdy na telefonie</string>
+    <string name="my_vehicles_description">Twórz swoją listę taboru gdziekolwiek jesteś, aby następnie móc ją zsynchronizować z BigFredem na dowolnej imprezie makietowej zamiast ręcznie wpisywać każdy pojazd na miejscu</string>
+    <string name="my_vehicles_empty">Brak pojazdów — dodaj ręcznie lub przetrzymaj wiersz w bazie modeli</string>
+    <string name="my_vehicles_add">Dodaj pojazd</string>
+    <string name="my_vehicles_col_icon">Ikona</string>
+    <string name="my_vehicles_col_name">Nazwa</string>
+    <string name="my_vehicles_col_kind">Typ pojazdu</string>
+    <string name="my_vehicles_col_number">Numer</string>
+    <string name="my_vehicles_col_carrier">Przewoźnik</string>
+    <string name="my_vehicles_col_assignment">Przydział</string>
+    <string name="my_vehicles_col_revision">Rewizja</string>
+    <string name="my_vehicles_col_epoch">Epoka</string>
+    <string name="my_vehicles_col_dcc">Adres DCC</string>
+    <string name="my_vehicles_action_edit">Edytuj</string>
+    <string name="my_vehicles_action_delete">Usuń</string>
+    <string name="my_vehicles_action_sync">Synchronizuj do BigFred</string>
+    <string name="my_vehicles_dialog_add">Dodaj pojazd</string>
+    <string name="my_vehicles_dialog_edit">Edytuj pojazd</string>
+    <string name="my_vehicles_pick_icon">Wybierz ikonę</string>
+    <string name="my_vehicles_clear_icon">Usuń ikonę</string>
+    <string name="my_vehicles_save">Zapisz</string>
+    <string name="my_vehicles_cancel">Anuluj</string>
+    <string name="my_vehicles_sync_ok">Zsynchronizowano z BigFredem</string>
+    <string name="my_vehicles_sync_unauthorized">Najpierw zaloguj się w aplikacji BigFred</string>
+    <string name="my_vehicles_sync_conflict">Konflikt synchronizacji (np. adres DCC już zajęty)</string>
+    <string name="my_vehicles_sync_error">Synchronizacja nie powiodła się</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Wybierz serwer BigFred</string>

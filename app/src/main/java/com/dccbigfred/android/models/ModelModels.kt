@@ -47,3 +47,9 @@ data class FilterOptions(
     val vehicleKinds: List<String> = emptyList(),
     val scales: List<String> = emptyList(),
 )
+
+/** Icon entry for the local-vehicle icon picker (asset path + vehicle number label). */
+data class CatalogIcon(
+    val imagePath: String,
+    val vehicleNumber: String?,
+)

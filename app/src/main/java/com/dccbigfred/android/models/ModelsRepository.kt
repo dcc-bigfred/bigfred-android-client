@@ -20,6 +20,29 @@ class ModelsRepository(
         )
     }
 
+    fun listIcons(): List<CatalogIcon> {
+        val db = database.readable()
+        return db.rawQuery(
+            """
+            SELECT DISTINCT image_path, vehicle_number FROM models
+            WHERE image_path IS NOT NULL AND image_path != ''
+            ORDER BY vehicle_number COLLATE NOCASE
+            """.trimIndent(),
+            emptyArray(),
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(
+                        CatalogIcon(
+                            imagePath = c.getString(0),
+                            vehicleNumber = if (c.isNull(1)) null else c.getString(1),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     fun queryPage(filters: ModelFilters, page: Int, pageSize: Int): ModelPage {
         val db = database.readable()
         val (where, args) = buildWhere(filters)

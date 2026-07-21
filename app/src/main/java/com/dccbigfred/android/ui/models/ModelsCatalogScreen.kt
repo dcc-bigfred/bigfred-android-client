@@ -1,8 +1,10 @@
 package com.dccbigfred.android.ui.models
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -38,6 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -47,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +72,7 @@ import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
 import kotlin.math.floor
 import kotlin.math.max
+import kotlinx.coroutines.launch
 
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
@@ -77,11 +84,16 @@ fun ModelsCatalogScreen(
     pickerMode: Boolean = false,
     onModelPicked: ((ModelRow) -> Unit)? = null,
     onCancel: (() -> Unit)? = null,
+    onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
     viewModel: ModelsCatalogViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filtersExpanded by remember { mutableStateOf(false) }
     var selectedRow by remember { mutableStateOf<ModelRow?>(null) }
+    var menuForId by remember { mutableStateOf<Long?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val addedMsg = stringResource(R.string.models_added_to_my_vehicles)
 
     Scaffold(
         topBar = {
@@ -119,6 +131,7 @@ fun ModelsCatalogScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             if (pickerMode) {
                 Button(
@@ -173,6 +186,18 @@ fun ModelsCatalogScreen(
                         selectedId = if (pickerMode) selectedRow?.id else null,
                         onRowClick = if (pickerMode) {
                             { row -> selectedRow = row }
+                        } else {
+                            null
+                        },
+                        menuForId = if (!pickerMode && onAddToMyVehicles != null) menuForId else null,
+                        onMenuChange = { menuForId = it },
+                        onAddToMyVehicles = if (!pickerMode) {
+                            onAddToMyVehicles?.let { cb ->
+                                { row ->
+                                    cb(row)
+                                    scope.launch { snackbar.showSnackbar(addedMsg) }
+                                }
+                            }
                         } else {
                             null
                         },
@@ -406,6 +431,9 @@ private fun ModelsTable(
     selectedId: Long?,
     onRowClick: ((ModelRow) -> Unit)?,
     onPageSizeChanged: (Int) -> Unit,
+    menuForId: Long? = null,
+    onMenuChange: (Long?) -> Unit = {},
+    onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -429,17 +457,17 @@ private fun ModelsTable(
                 .padding(vertical = 8.dp, horizontal = 4.dp),
         ) {
             HeaderCell(stringResource(R.string.models_col_image), 64.dp)
+            HeaderCell(stringResource(R.string.models_col_vehicle_number), 160.dp)
+            HeaderCell(stringResource(R.string.models_col_assignment), 120.dp)
+            HeaderCell(stringResource(R.string.models_col_revision), 100.dp)
+            HeaderCell(stringResource(R.string.models_col_epoch), 100.dp)
             HeaderCell(stringResource(R.string.models_col_manufacturer), 110.dp)
             HeaderCell(stringResource(R.string.models_col_catalog), 90.dp)
             HeaderCell(stringResource(R.string.models_col_scale), 56.dp)
             HeaderCell(stringResource(R.string.models_col_release), 100.dp)
             HeaderCell(stringResource(R.string.models_col_vehicle_kind), 160.dp)
             HeaderCell(stringResource(R.string.models_col_type), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_vehicle_number), 160.dp)
             HeaderCell(stringResource(R.string.models_col_carrier), 130.dp)
-            HeaderCell(stringResource(R.string.models_col_assignment), 120.dp)
-            HeaderCell(stringResource(R.string.models_col_revision), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_epoch), 100.dp)
             HeaderCell(stringResource(R.string.models_col_livery), 160.dp)
         }
         Box(
@@ -454,11 +482,32 @@ private fun ModelsTable(
                     .horizontalScroll(hScroll),
             ) {
                 rows.forEach { row ->
-                    ModelTableRow(
-                        row = row,
-                        selected = selectedId == row.id,
-                        onClick = onRowClick?.let { cb -> { cb(row) } },
-                    )
+                    Box {
+                        ModelTableRow(
+                            row = row,
+                            selected = selectedId == row.id,
+                            onClick = onRowClick?.let { cb -> { cb(row) } },
+                            onLongClick = if (onAddToMyVehicles != null) {
+                                { onMenuChange(row.id) }
+                            } else {
+                                null
+                            },
+                        )
+                        if (onAddToMyVehicles != null) {
+                            DropdownMenu(
+                                expanded = menuForId == row.id,
+                                onDismissRequest = { onMenuChange(null) },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.models_add_to_my_vehicles)) },
+                                    onClick = {
+                                        onAddToMyVehicles(row)
+                                        onMenuChange(null)
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
             }
             if (loading) {
@@ -488,11 +537,13 @@ private fun HeaderCell(text: String, width: Dp) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ModelTableRow(
     row: ModelRow,
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     Row(
@@ -506,10 +557,12 @@ private fun ModelTableRow(
                 },
             )
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
+                when {
+                    onClick != null || onLongClick != null -> Modifier.combinedClickable(
+                        onClick = { onClick?.invoke() },
+                        onLongClick = onLongClick,
+                    )
+                    else -> Modifier
                 },
             )
             .padding(vertical = 4.dp, horizontal = 4.dp),
@@ -532,17 +585,17 @@ private fun ModelTableRow(
                 )
             }
         }
+        BodyCell(row.vehicleNumber.orEmpty(), 160.dp)
+        BodyCell(row.assignment.orEmpty(), 120.dp)
+        BodyCell(formatDate(row.revisionDate, row.revisionDatePrecision), 100.dp)
+        BodyCell(row.epochs.joinToString(", ") { formatEpoch(it) }, 100.dp)
         BodyCell(row.manufacturer, 110.dp)
         BodyCell(row.catalogNumber, 90.dp)
         BodyCell(row.scale, 56.dp)
         BodyCell(formatDate(row.releaseDate, row.releaseDatePrecision), 100.dp)
         BodyCell(row.vehicleKind, 160.dp)
         BodyCell(row.type.orEmpty(), 100.dp)
-        BodyCell(row.vehicleNumber.orEmpty(), 160.dp)
         BodyCell(row.carrier.orEmpty(), 130.dp)
-        BodyCell(row.assignment.orEmpty(), 120.dp)
-        BodyCell(formatDate(row.revisionDate, row.revisionDatePrecision), 100.dp)
-        BodyCell(row.epochs.joinToString(", ") { formatEpoch(it) }, 100.dp)
         BodyCell(row.livery.orEmpty(), 160.dp)
     }
 }
