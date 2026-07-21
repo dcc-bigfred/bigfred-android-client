@@ -15,6 +15,9 @@ object LatencySlo {
     const val WARN_MS = 200L
     const val BAD_MS = 300L
 
+    /** Default chart / gauge Y maximum (0 … [DEFAULT_SCALE_MAX_MS] ms). */
+    const val DEFAULT_SCALE_MAX_MS = BAD_MS
+
     /** Horizontal reference lines drawn on the latency chart. */
     val thresholdLinesMs: List<Long> = listOf(GOOD_MS, WARN_MS, BAD_MS)
 

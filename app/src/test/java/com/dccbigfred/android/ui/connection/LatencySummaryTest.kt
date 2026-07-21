@@ -29,11 +29,12 @@ class LatencySummaryTest {
     }
 
     @Test
-    fun latencyScaleMaxMs_includesSloCeilingAndRoundsUp() {
+    fun latencyScaleMaxMs_defaultIs300_growsThenShrinksBack() {
         assertEquals(300L, latencyScaleMaxMs(emptyList()))
-        assertEquals(300L, latencyScaleMaxMs(listOf(12L)))
-        assertEquals(300L, latencyScaleMaxMs(listOf(100L)))
-        assertEquals(310L, latencyScaleMaxMs(listOf(301L)))
+        assertEquals(300L, latencyScaleMaxMs(listOf(12L, 100L, 299L)))
+        assertEquals(310L, latencyScaleMaxMs(listOf(12L, 301L)))
         assertEquals(400L, latencyScaleMaxMs(listOf(391L, 400L)))
+        // Once the outlier leaves the window, scale returns to default.
+        assertEquals(300L, latencyScaleMaxMs(listOf(12L, 100L)))
     }
 }
