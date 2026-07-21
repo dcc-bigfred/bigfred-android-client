@@ -50,8 +50,8 @@
     <string name="models_col_livery">Livery</string>
     <string name="models_add_to_my_vehicles">Add to my vehicles</string>
     <string name="models_added_to_my_vehicles">Added to my vehicles on phone</string>
-    <string name="models_search_vehicle_number">Search vehicle number</string>
-    <string name="models_search_model">Search model</string>
+    <string name="models_search_vehicle_number">Search vehicle number online</string>
+    <string name="models_search_model">Search model online</string>
 
     <!-- My vehicles on phone -->
     <string name="my_vehicles_title">My vehicles on phone</string>

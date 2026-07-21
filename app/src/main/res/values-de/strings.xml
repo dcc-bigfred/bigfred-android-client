@@ -50,8 +50,8 @@
     <string name="models_col_livery">Lackierung</string>
     <string name="models_add_to_my_vehicles">Zu meinen Fahrzeugen hinzufügen</string>
     <string name="models_added_to_my_vehicles">Zu meinen Fahrzeugen auf dem Telefon hinzugefügt</string>
-    <string name="models_search_vehicle_number">Fahrzeugnummer suchen</string>
-    <string name="models_search_model">Modell suchen</string>
+    <string name="models_search_vehicle_number">Fahrzeugnummer im Internet suchen</string>
+    <string name="models_search_model">Modell im Internet suchen</string>
 
     <!-- My vehicles on phone -->
     <string name="my_vehicles_title">Meine Fahrzeuge auf dem Telefon</string>
