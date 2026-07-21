@@ -48,6 +48,7 @@ import androidx.core.os.LocaleListCompat
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import kotlinx.coroutines.launch
 
 private enum class AppLanguage(val tag: String?) {
@@ -101,6 +102,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

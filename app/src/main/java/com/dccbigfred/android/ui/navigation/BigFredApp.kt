@@ -50,7 +50,6 @@ import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
-import com.dccbigfred.android.network.ServerProbe
 import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
@@ -61,7 +60,6 @@ import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
 import com.dccbigfred.android.ui.webview.applyLocaleToWebView
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Only this strip at the physical left edge can start an open gesture. */
@@ -77,7 +75,6 @@ fun BigFredApp() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val probe = remember { ServerProbe() }
     val wifiLock = remember { LowLatencyWifiLock(context) }
 
     var bootstrapped by remember { mutableStateOf(false) }
@@ -93,16 +90,8 @@ fun BigFredApp() {
     }
     LaunchedEffect(Unit) {
         if (bootstrapped) return@LaunchedEffect
-        val url = prefs.serverBaseUrl.first()
-        if (url != null && probe.isReachable(url)) {
-            activeUrl = url
-            navController.navigate(Routes.WEBVIEW) {
-                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
-            }
-        } else {
-            navController.navigate(Routes.DISCOVERY) {
-                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
-            }
+        navController.navigate(Routes.DISCOVERY) {
+            popUpTo(Routes.BOOTSTRAP) { inclusive = true }
         }
         bootstrapped = true
     }

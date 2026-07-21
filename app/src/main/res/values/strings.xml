@@ -97,6 +97,7 @@
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>
+    <string name="discovery_intro">Connect to a local home or club server to control vehicles. Extra options are in the drawer menu on the left. Without a server connection you can manage your rolling stock in the app and easily copy it to any server once your phone is in range — for example at a club meet.</string>
     <string name="discovery_scanning">Scanning network…</string>
     <string name="discovery_empty">No server found. Check Wi‑Fi or enter an address manually.</string>
     <string name="discovery_manual">Manual</string>
@@ -135,6 +136,10 @@
     <string name="connection_chart_time">time →</string>
     <string name="connection_wifi_lock_active">Wi‑Fi low-latency lock: active</string>
     <string name="connection_wifi_lock_inactive">Wi‑Fi low-latency lock: inactive</string>
+
+    <!-- WebView connection error -->
+    <string name="webview_connection_error">Cannot connect to the BigFred server</string>
+    <string name="webview_retry">Try again</string>
 
     <!-- About -->
     <string name="about_title">About</string>

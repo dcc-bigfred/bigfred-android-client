@@ -2,18 +2,30 @@ package com.dccbigfred.android.ui.webview
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -23,11 +35,16 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.dccbigfred.android.BuildConfig
+import com.dccbigfred.android.R
 import com.dccbigfred.android.locale.LocalePrefs
 import com.dccbigfred.android.models.ModelPickPayload
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
@@ -58,6 +75,7 @@ fun BigFredWebViewScreen(
     val sessionUrl = remember(baseUrl) { baseUrl.trimEnd('/') + "/" }
     var webView by remember { mutableStateOf<KeepAliveWebView?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf<String?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var pickerVisible by remember { mutableStateOf(false) }
     val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
@@ -179,9 +197,10 @@ fun BigFredWebViewScreen(
                         override fun onPageStarted(
                             view: WebView,
                             url: String?,
-                            favicon: android.graphics.Bitmap?,
+                            favicon: Bitmap?,
                         ) {
                             loading = true
+                            loadError = null
                         }
 
                         override fun doUpdateVisitedHistory(
@@ -190,6 +209,53 @@ fun BigFredWebViewScreen(
                             isReload: Boolean,
                         ) {
                             canGoBack = view.canGoBack()
+                        }
+
+                        override fun onReceivedError(
+                            view: WebView,
+                            request: WebResourceRequest,
+                            error: WebResourceError,
+                        ) {
+                            if (!request.isForMainFrame) return
+                            loading = false
+                            val description = error.description?.toString().orEmpty()
+                            loadError = buildString {
+                                if (description.isNotBlank()) append(description)
+                                if (isNotEmpty()) append(" ")
+                                append("(${error.errorCode})")
+                            }
+                        }
+
+                        @Deprecated("Deprecated in Java")
+                        override fun onReceivedError(
+                            view: WebView,
+                            errorCode: Int,
+                            description: String?,
+                            failingUrl: String?,
+                        ) {
+                            loading = false
+                            loadError = buildString {
+                                if (!description.isNullOrBlank()) append(description)
+                                if (isNotEmpty()) append(" ")
+                                append("($errorCode)")
+                            }
+                        }
+
+                        override fun onReceivedHttpError(
+                            view: WebView,
+                            request: WebResourceRequest,
+                            errorResponse: WebResourceResponse,
+                        ) {
+                            if (!request.isForMainFrame) return
+                            val code = errorResponse.statusCode
+                            if (code < 400) return
+                            loading = false
+                            val reason = errorResponse.reasonPhrase?.takeIf { it.isNotBlank() }
+                            loadError = if (reason != null) {
+                                "HTTP $code $reason"
+                            } else {
+                                "HTTP $code"
+                            }
                         }
                     }
                     // Tag before load so the first update{} pass does not reload.
@@ -209,8 +275,19 @@ fun BigFredWebViewScreen(
             },
             modifier = Modifier.fillMaxSize(),
         )
-        if (loading) {
+        if (loading && loadError == null) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+        val error = loadError
+        if (error != null) {
+            WebViewConnectionErrorOverlay(
+                errorDetail = error,
+                onRetry = {
+                    loadError = null
+                    loading = true
+                    webView?.reload()
+                },
+            )
         }
         if (pickerVisible) {
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -228,6 +305,53 @@ fun BigFredWebViewScreen(
                         deliverModelPickResult(webView, null)
                         pickerVisible = false
                     },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebViewConnectionErrorOverlay(
+    errorDetail: String,
+    onRetry: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 24.dp, vertical = 48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_bigfred_logo),
+                    contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier.size(120.dp),
+                )
+                Text(
+                    text = stringResource(R.string.webview_connection_error),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
+                Button(onClick = onRetry) {
+                    Text(stringResource(R.string.webview_retry))
+                }
+            }
+            if (errorDetail.isNotBlank()) {
+                Text(
+                    text = errorDetail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
                 )
             }
         }
