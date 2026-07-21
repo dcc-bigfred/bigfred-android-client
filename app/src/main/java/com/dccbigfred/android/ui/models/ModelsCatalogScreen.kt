@@ -73,12 +73,24 @@ import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.models.ModelSortColumn
+import android.content.Intent
+import android.net.Uri
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.math.floor
 import kotlin.math.max
 import kotlinx.coroutines.launch
 
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
+
+private fun openGoogleSearch(context: android.content.Context, query: String) {
+    val q = query.trim()
+    if (q.isEmpty()) return
+    val encoded = URLEncoder.encode(q, StandardCharsets.UTF_8.toString())
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$encoded"))
+    context.startActivity(intent)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,7 +207,7 @@ fun ModelsCatalogScreen(
                         } else {
                             null
                         },
-                        menuForId = if (!pickerMode && onAddToMyVehicles != null) menuForId else null,
+                        menuForId = if (!pickerMode) menuForId else null,
                         onMenuChange = { menuForId = it },
                         onAddToMyVehicles = if (!pickerMode) {
                             onAddToMyVehicles?.let { cb ->
@@ -207,6 +219,7 @@ fun ModelsCatalogScreen(
                         } else {
                             null
                         },
+                        showContextMenu = !pickerMode,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
@@ -443,8 +456,10 @@ private fun ModelsTable(
     menuForId: Long? = null,
     onMenuChange: (Long?) -> Unit = {},
     onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
+    showContextMenu: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     var bodyHeightPx by remember { mutableIntStateOf(0) }
     val rowHeightPx = with(density) { RowHeight.roundToPx() }
@@ -580,21 +595,44 @@ private fun ModelsTable(
                             row = row,
                             selected = selectedId == row.id,
                             onClick = onRowClick?.let { cb -> { cb(row) } },
-                            onLongClick = if (onAddToMyVehicles != null) {
+                            onLongClick = if (showContextMenu) {
                                 { onMenuChange(row.id) }
                             } else {
                                 null
                             },
                         )
-                        if (onAddToMyVehicles != null) {
+                        if (showContextMenu) {
                             DropdownMenu(
                                 expanded = menuForId == row.id,
                                 onDismissRequest = { onMenuChange(null) },
                             ) {
+                                if (onAddToMyVehicles != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.models_add_to_my_vehicles)) },
+                                        onClick = {
+                                            onAddToMyVehicles(row)
+                                            onMenuChange(null)
+                                        },
+                                    )
+                                }
+                                val vehicleNumber = row.vehicleNumber?.trim().orEmpty()
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.models_add_to_my_vehicles)) },
+                                    text = { Text(stringResource(R.string.models_search_vehicle_number_google)) },
+                                    enabled = vehicleNumber.isNotEmpty(),
                                     onClick = {
-                                        onAddToMyVehicles(row)
+                                        openGoogleSearch(context, vehicleNumber)
+                                        onMenuChange(null)
+                                    },
+                                )
+                                val modelQuery = listOf(row.manufacturer, row.catalogNumber)
+                                    .map { it.trim() }
+                                    .filter { it.isNotEmpty() }
+                                    .joinToString(" ")
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.models_search_model_google)) },
+                                    enabled = modelQuery.isNotEmpty(),
+                                    onClick = {
+                                        openGoogleSearch(context, modelQuery)
                                         onMenuChange(null)
                                     },
                                 )

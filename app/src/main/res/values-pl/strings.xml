@@ -50,6 +50,8 @@
     <string name="models_col_livery">Malowanie</string>
     <string name="models_add_to_my_vehicles">Dodaj do moich pojazdów</string>
     <string name="models_added_to_my_vehicles">Dodano do moich pojazdów na telefonie</string>
+    <string name="models_search_vehicle_number_google">Wyszukaj numer pojazdu w Google</string>
+    <string name="models_search_model_google">Wyszukaj model w Google</string>
 
     <!-- My vehicles on phone -->
     <string name="my_vehicles_title">Moje pojazdy na telefonie</string>
