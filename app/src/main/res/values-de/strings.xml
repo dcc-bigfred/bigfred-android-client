@@ -13,6 +13,7 @@
     <string name="menu_connection_status">Verbindungsstatus</string>
     <string name="menu_find_server">Server suchen</string>
     <string name="menu_models">Modellkatalog</string>
+    <string name="menu_my_vehicles">Meine Fahrzeuge auf dem Telefon</string>
     <string name="menu_about">Über</string>
 
     <!-- Models catalog -->
@@ -47,6 +48,52 @@
     <string name="models_col_revision">Revision</string>
     <string name="models_col_epoch">Epoche</string>
     <string name="models_col_livery">Lackierung</string>
+    <string name="models_add_to_my_vehicles">Zu meinen Fahrzeugen hinzufügen</string>
+    <string name="models_added_to_my_vehicles">Zu meinen Fahrzeugen auf dem Telefon hinzugefügt</string>
+    <string name="models_search_vehicle_number">Fahrzeugnummer im Internet suchen</string>
+    <string name="models_search_model">Modell im Internet suchen</string>
+
+    <!-- My vehicles on phone -->
+    <string name="my_vehicles_title">Meine Fahrzeuge auf dem Telefon</string>
+    <string name="my_vehicles_description">Erstellen Sie Ihre Fahrzeugliste überall und synchronisieren Sie sie später mit BigFred auf jeder Anlageveranstaltung, statt jedes Fahrzeug vor Ort manuell einzugeben.</string>
+    <string name="my_vehicles_empty">Noch keine Fahrzeuge — hinzufügen oder im Modellkatalog lange drücken</string>
+    <string name="my_vehicles_add">Fahrzeug hinzufügen</string>
+    <string name="my_vehicles_col_icon">Symbol</string>
+    <string name="my_vehicles_col_name">Name</string>
+    <string name="my_vehicles_col_kind">Fahrzeugart</string>
+    <string name="my_vehicles_col_number">Nummer</string>
+    <string name="my_vehicles_col_carrier">Betreiber</string>
+    <string name="my_vehicles_col_assignment">Zuordnung</string>
+    <string name="my_vehicles_col_revision">Revision</string>
+    <string name="my_vehicles_col_epoch">Epoche</string>
+    <string name="my_vehicles_col_dcc">DCC-Adresse</string>
+    <string name="my_vehicles_action_edit">Bearbeiten</string>
+    <string name="my_vehicles_action_delete">Löschen</string>
+    <string name="my_vehicles_delete_title">Fahrzeug löschen?</string>
+    <string name="my_vehicles_delete_message">„%1$s“ aus Meine Fahrzeuge auf dem Telefon entfernen? Das Fahrzeug wird nicht aus BigFred gelöscht.</string>
+    <string name="my_vehicles_action_sync">Mit BigFred synchronisieren</string>
+    <string name="my_vehicles_dialog_add">Fahrzeug hinzufügen</string>
+    <string name="my_vehicles_dialog_edit">Fahrzeug bearbeiten</string>
+    <string name="my_vehicles_pick_icon">Symbol wählen</string>
+    <string name="my_vehicles_clear_icon">Symbol entfernen</string>
+    <string name="my_vehicles_save">Speichern</string>
+    <string name="my_vehicles_cancel">Abbrechen</string>
+    <string name="my_vehicles_sync_ok">Mit BigFred synchronisiert</string>
+    <string name="my_vehicles_sync_unauthorized">Bitte zuerst in der BigFred-App anmelden</string>
+    <string name="my_vehicles_sync_error">Synchronisation fehlgeschlagen (%1$s)</string>
+    <string name="my_vehicles_sync_err_dcc_taken">DCC-Adresse ist bereits vergeben</string>
+    <string name="my_vehicles_sync_err_dcc_pool">DCC-Adresse liegt außerhalb Ihres Pools</string>
+    <string name="my_vehicles_sync_err_name_required">Fahrzeugname ist erforderlich</string>
+    <string name="my_vehicles_sync_err_kind_invalid">Ungültige Fahrzeugart</string>
+    <string name="my_vehicles_sync_err_epoch_invalid">Ungültige Epoche</string>
+    <string name="my_vehicles_sync_err_revision_invalid">Ungültiges Revisionsdatum</string>
+    <string name="my_vehicles_sync_err_not_owned">Dieses Fahrzeug gehört einem anderen Benutzer</string>
+    <string name="my_vehicles_sync_err_no_server">Kein BigFred-Server konfiguriert</string>
+    <string name="my_vehicles_sync_err_network">Netzwerkfehler</string>
+    <string name="my_vehicles_icon_search">Nach Fahrzeugnummer suchen</string>
+    <string name="my_vehicles_send_selected">Ausgewählte senden (%1$d)</string>
+    <string name="my_vehicles_banner_error">%1$s: %2$s</string>
+    <string name="my_vehicles_dismiss">Schließen</string>
 
     <!-- Discovery -->
     <string name="discovery_title">BigFred-Server wählen</string>

@@ -19,6 +19,21 @@ data class ModelRow(
     val epochs: List<String>,
 )
 
+enum class ModelSortColumn(val sql: String) {
+    VEHICLE_NUMBER("m.vehicle_number COLLATE NOCASE"),
+    ASSIGNMENT("m.assignment COLLATE NOCASE"),
+    REVISION("m.revision_date"),
+    EPOCH("(SELECT MIN(e.epoch) FROM model_epochs e WHERE e.model_id = m.id)"),
+    MANUFACTURER("m.manufacturer COLLATE NOCASE"),
+    CATALOG("m.catalog_number COLLATE NOCASE"),
+    SCALE("m.scale COLLATE NOCASE"),
+    RELEASE("m.release_date"),
+    VEHICLE_KIND("m.vehicle_kind COLLATE NOCASE"),
+    TYPE("m.type COLLATE NOCASE"),
+    CARRIER("m.carrier COLLATE NOCASE"),
+    LIVERY("m.livery COLLATE NOCASE"),
+}
+
 data class ModelFilters(
     val query: String = "",
     val manufacturers: Set<String> = emptySet(),
@@ -28,6 +43,8 @@ data class ModelFilters(
     val carriers: Set<String> = emptySet(),
     val vehicleKinds: Set<String> = emptySet(),
     val scale: String? = null,
+    val sortColumn: ModelSortColumn? = null,
+    val sortAsc: Boolean = true,
 )
 
 data class ModelPage(
@@ -46,4 +63,10 @@ data class FilterOptions(
     val carriers: List<String> = emptyList(),
     val vehicleKinds: List<String> = emptyList(),
     val scales: List<String> = emptyList(),
+)
+
+/** Icon entry for the local-vehicle icon picker (asset path + vehicle number label). */
+data class CatalogIcon(
+    val imagePath: String,
+    val vehicleNumber: String?,
 )

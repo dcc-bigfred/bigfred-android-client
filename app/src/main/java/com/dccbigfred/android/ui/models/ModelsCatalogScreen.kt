@@ -1,8 +1,10 @@
 package com.dccbigfred.android.ui.models
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +24,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -38,6 +43,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -47,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,11 +72,25 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
+import com.dccbigfred.android.models.ModelSortColumn
+import android.app.SearchManager
+import android.content.Intent
 import kotlin.math.floor
 import kotlin.math.max
+import kotlinx.coroutines.launch
 
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
+
+/** Opens the device’s preferred web search handler (ACTION_WEB_SEARCH). */
+private fun openWebSearch(context: android.content.Context, query: String) {
+    val q = query.trim()
+    if (q.isEmpty()) return
+    val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+        putExtra(SearchManager.QUERY, q)
+    }
+    context.startActivity(intent)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,11 +99,16 @@ fun ModelsCatalogScreen(
     pickerMode: Boolean = false,
     onModelPicked: ((ModelRow) -> Unit)? = null,
     onCancel: (() -> Unit)? = null,
+    onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
     viewModel: ModelsCatalogViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var filtersExpanded by remember { mutableStateOf(false) }
     var selectedRow by remember { mutableStateOf<ModelRow?>(null) }
+    var menuForId by remember { mutableStateOf<Long?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val addedMsg = stringResource(R.string.models_added_to_my_vehicles)
 
     Scaffold(
         topBar = {
@@ -119,6 +146,7 @@ fun ModelsCatalogScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             if (pickerMode) {
                 Button(
@@ -171,11 +199,27 @@ fun ModelsCatalogScreen(
                         rows = state.page.rows,
                         loading = state.loading,
                         selectedId = if (pickerMode) selectedRow?.id else null,
+                        sortColumn = state.filters.sortColumn,
+                        sortAsc = state.filters.sortAsc,
+                        onSort = viewModel::toggleSort,
                         onRowClick = if (pickerMode) {
                             { row -> selectedRow = row }
                         } else {
                             null
                         },
+                        menuForId = if (!pickerMode) menuForId else null,
+                        onMenuChange = { menuForId = it },
+                        onAddToMyVehicles = if (!pickerMode) {
+                            onAddToMyVehicles?.let { cb ->
+                                { row ->
+                                    cb(row)
+                                    scope.launch { snackbar.showSnackbar(addedMsg) }
+                                }
+                            }
+                        } else {
+                            null
+                        },
+                        showContextMenu = !pickerMode,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
@@ -406,8 +450,16 @@ private fun ModelsTable(
     selectedId: Long?,
     onRowClick: ((ModelRow) -> Unit)?,
     onPageSizeChanged: (Int) -> Unit,
+    sortColumn: ModelSortColumn? = null,
+    sortAsc: Boolean = true,
+    onSort: (ModelSortColumn) -> Unit = {},
+    menuForId: Long? = null,
+    onMenuChange: (Long?) -> Unit = {},
+    onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
+    showContextMenu: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     var bodyHeightPx by remember { mutableIntStateOf(0) }
     val rowHeightPx = with(density) { RowHeight.roundToPx() }
@@ -429,18 +481,102 @@ private fun ModelsTable(
                 .padding(vertical = 8.dp, horizontal = 4.dp),
         ) {
             HeaderCell(stringResource(R.string.models_col_image), 64.dp)
-            HeaderCell(stringResource(R.string.models_col_manufacturer), 110.dp)
-            HeaderCell(stringResource(R.string.models_col_catalog), 90.dp)
-            HeaderCell(stringResource(R.string.models_col_scale), 56.dp)
-            HeaderCell(stringResource(R.string.models_col_release), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_vehicle_kind), 160.dp)
-            HeaderCell(stringResource(R.string.models_col_type), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_vehicle_number), 160.dp)
-            HeaderCell(stringResource(R.string.models_col_carrier), 130.dp)
-            HeaderCell(stringResource(R.string.models_col_assignment), 120.dp)
-            HeaderCell(stringResource(R.string.models_col_revision), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_epoch), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_livery), 160.dp)
+            HeaderCell(
+                stringResource(R.string.models_col_vehicle_number),
+                160.dp,
+                ModelSortColumn.VEHICLE_NUMBER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_assignment),
+                120.dp,
+                ModelSortColumn.ASSIGNMENT,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_revision),
+                100.dp,
+                ModelSortColumn.REVISION,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_epoch),
+                100.dp,
+                ModelSortColumn.EPOCH,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_manufacturer),
+                110.dp,
+                ModelSortColumn.MANUFACTURER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_catalog),
+                90.dp,
+                ModelSortColumn.CATALOG,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_scale),
+                56.dp,
+                ModelSortColumn.SCALE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_release),
+                100.dp,
+                ModelSortColumn.RELEASE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_vehicle_kind),
+                160.dp,
+                ModelSortColumn.VEHICLE_KIND,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_type),
+                100.dp,
+                ModelSortColumn.TYPE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_carrier),
+                130.dp,
+                ModelSortColumn.CARRIER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_livery),
+                160.dp,
+                ModelSortColumn.LIVERY,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
         }
         Box(
             modifier = Modifier
@@ -454,11 +590,55 @@ private fun ModelsTable(
                     .horizontalScroll(hScroll),
             ) {
                 rows.forEach { row ->
-                    ModelTableRow(
-                        row = row,
-                        selected = selectedId == row.id,
-                        onClick = onRowClick?.let { cb -> { cb(row) } },
-                    )
+                    Box {
+                        ModelTableRow(
+                            row = row,
+                            selected = selectedId == row.id,
+                            onClick = onRowClick?.let { cb -> { cb(row) } },
+                            onLongClick = if (showContextMenu) {
+                                { onMenuChange(row.id) }
+                            } else {
+                                null
+                            },
+                        )
+                        if (showContextMenu) {
+                            DropdownMenu(
+                                expanded = menuForId == row.id,
+                                onDismissRequest = { onMenuChange(null) },
+                            ) {
+                                if (onAddToMyVehicles != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.models_add_to_my_vehicles)) },
+                                        onClick = {
+                                            onAddToMyVehicles(row)
+                                            onMenuChange(null)
+                                        },
+                                    )
+                                }
+                                val vehicleNumber = row.vehicleNumber?.trim().orEmpty()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.models_search_vehicle_number)) },
+                                    enabled = vehicleNumber.isNotEmpty(),
+                                    onClick = {
+                                        openWebSearch(context, vehicleNumber)
+                                        onMenuChange(null)
+                                    },
+                                )
+                                val modelQuery = listOf(row.manufacturer, row.catalogNumber)
+                                    .map { it.trim() }
+                                    .filter { it.isNotEmpty() }
+                                    .joinToString(" ")
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.models_search_model)) },
+                                    enabled = modelQuery.isNotEmpty(),
+                                    onClick = {
+                                        openWebSearch(context, modelQuery)
+                                        onMenuChange(null)
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
             }
             if (loading) {
@@ -475,24 +655,52 @@ private fun ModelsTable(
 }
 
 @Composable
-private fun HeaderCell(text: String, width: Dp) {
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
+private fun HeaderCell(
+    text: String,
+    width: Dp,
+    sortColumn: ModelSortColumn? = null,
+    activeColumn: ModelSortColumn? = null,
+    sortAsc: Boolean = true,
+    onSort: (ModelSortColumn) -> Unit = {},
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .width(width)
+            .then(
+                if (sortColumn != null) {
+                    Modifier.clickable { onSort(sortColumn) }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 4.dp),
-    )
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (sortColumn != null && sortColumn == activeColumn) {
+            Icon(
+                imageVector = if (sortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ModelTableRow(
     row: ModelRow,
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     Row(
@@ -506,10 +714,12 @@ private fun ModelTableRow(
                 },
             )
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
+                when {
+                    onClick != null || onLongClick != null -> Modifier.combinedClickable(
+                        onClick = { onClick?.invoke() },
+                        onLongClick = onLongClick,
+                    )
+                    else -> Modifier
                 },
             )
             .padding(vertical = 4.dp, horizontal = 4.dp),
@@ -532,17 +742,17 @@ private fun ModelTableRow(
                 )
             }
         }
+        BodyCell(row.vehicleNumber.orEmpty(), 160.dp)
+        BodyCell(row.assignment.orEmpty(), 120.dp)
+        BodyCell(formatDate(row.revisionDate, row.revisionDatePrecision), 100.dp)
+        BodyCell(row.epochs.joinToString(", ") { formatEpoch(it) }, 100.dp)
         BodyCell(row.manufacturer, 110.dp)
         BodyCell(row.catalogNumber, 90.dp)
         BodyCell(row.scale, 56.dp)
         BodyCell(formatDate(row.releaseDate, row.releaseDatePrecision), 100.dp)
         BodyCell(row.vehicleKind, 160.dp)
         BodyCell(row.type.orEmpty(), 100.dp)
-        BodyCell(row.vehicleNumber.orEmpty(), 160.dp)
         BodyCell(row.carrier.orEmpty(), 130.dp)
-        BodyCell(row.assignment.orEmpty(), 120.dp)
-        BodyCell(formatDate(row.revisionDate, row.revisionDatePrecision), 100.dp)
-        BodyCell(row.epochs.joinToString(", ") { formatEpoch(it) }, 100.dp)
         BodyCell(row.livery.orEmpty(), 160.dp)
     }
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dccbigfred.android.models.FilterOptions
 import com.dccbigfred.android.models.ModelFilters
 import com.dccbigfred.android.models.ModelPage
+import com.dccbigfred.android.models.ModelSortColumn
 import com.dccbigfred.android.models.ModelsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -96,8 +97,23 @@ class ModelsCatalogViewModel(
     }
 
     fun clearFilters() {
-        _state.update { it.copy(filters = ModelFilters(query = it.filters.query)) }
+        _state.update {
+            it.copy(
+                filters = ModelFilters(
+                    query = it.filters.query,
+                    sortColumn = it.filters.sortColumn,
+                    sortAsc = it.filters.sortAsc,
+                ),
+            )
+        }
         reload(resetPage = true)
+    }
+
+    fun toggleSort(column: ModelSortColumn) {
+        updateFilters {
+            if (sortColumn == column) copy(sortAsc = !sortAsc)
+            else copy(sortColumn = column, sortAsc = true)
+        }
     }
 
     fun nextPage() {

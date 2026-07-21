@@ -13,6 +13,7 @@
     <string name="menu_connection_status">Connection status</string>
     <string name="menu_find_server">Find server</string>
     <string name="menu_models">Model catalog</string>
+    <string name="menu_my_vehicles">My vehicles on phone</string>
     <string name="menu_about">About</string>
 
     <!-- Models catalog -->
@@ -47,6 +48,52 @@
     <string name="models_col_revision">Revision</string>
     <string name="models_col_epoch">Epoch</string>
     <string name="models_col_livery">Livery</string>
+    <string name="models_add_to_my_vehicles">Add to my vehicles</string>
+    <string name="models_added_to_my_vehicles">Added to my vehicles on phone</string>
+    <string name="models_search_vehicle_number">Search vehicle number online</string>
+    <string name="models_search_model">Search model online</string>
+
+    <!-- My vehicles on phone -->
+    <string name="my_vehicles_title">My vehicles on phone</string>
+    <string name="my_vehicles_description">Build your rolling stock list anywhere, then sync it to BigFred at any layout event instead of typing every vehicle on site.</string>
+    <string name="my_vehicles_empty">No vehicles yet — add one or long-press a row in the model catalog</string>
+    <string name="my_vehicles_add">Add vehicle</string>
+    <string name="my_vehicles_col_icon">Icon</string>
+    <string name="my_vehicles_col_name">Name</string>
+    <string name="my_vehicles_col_kind">Vehicle type</string>
+    <string name="my_vehicles_col_number">Number</string>
+    <string name="my_vehicles_col_carrier">Carrier</string>
+    <string name="my_vehicles_col_assignment">Assignment</string>
+    <string name="my_vehicles_col_revision">Revision</string>
+    <string name="my_vehicles_col_epoch">Epoch</string>
+    <string name="my_vehicles_col_dcc">DCC address</string>
+    <string name="my_vehicles_action_edit">Edit</string>
+    <string name="my_vehicles_action_delete">Delete</string>
+    <string name="my_vehicles_delete_title">Delete vehicle?</string>
+    <string name="my_vehicles_delete_message">Remove “%1$s” from My vehicles on phone? This does not delete it from BigFred.</string>
+    <string name="my_vehicles_action_sync">Sync to BigFred</string>
+    <string name="my_vehicles_dialog_add">Add vehicle</string>
+    <string name="my_vehicles_dialog_edit">Edit vehicle</string>
+    <string name="my_vehicles_pick_icon">Choose icon</string>
+    <string name="my_vehicles_clear_icon">Clear icon</string>
+    <string name="my_vehicles_save">Save</string>
+    <string name="my_vehicles_cancel">Cancel</string>
+    <string name="my_vehicles_sync_ok">Synced to BigFred</string>
+    <string name="my_vehicles_sync_unauthorized">Log in to BigFred in the app first</string>
+    <string name="my_vehicles_sync_error">Sync failed (%1$s)</string>
+    <string name="my_vehicles_sync_err_dcc_taken">DCC address is already taken</string>
+    <string name="my_vehicles_sync_err_dcc_pool">DCC address is outside your pool</string>
+    <string name="my_vehicles_sync_err_name_required">Vehicle name is required</string>
+    <string name="my_vehicles_sync_err_kind_invalid">Invalid vehicle type</string>
+    <string name="my_vehicles_sync_err_epoch_invalid">Invalid epoch</string>
+    <string name="my_vehicles_sync_err_revision_invalid">Invalid revision date</string>
+    <string name="my_vehicles_sync_err_not_owned">This vehicle belongs to another user</string>
+    <string name="my_vehicles_sync_err_no_server">No BigFred server configured</string>
+    <string name="my_vehicles_sync_err_network">Network error</string>
+    <string name="my_vehicles_icon_search">Search by vehicle number</string>
+    <string name="my_vehicles_send_selected">Send selected (%1$d)</string>
+    <string name="my_vehicles_banner_error">%1$s: %2$s</string>
+    <string name="my_vehicles_dismiss">Dismiss</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>
