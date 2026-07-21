@@ -1,7 +1,10 @@
 package com.dccbigfred.android.ui.discovery
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,6 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,7 +44,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,6 +56,7 @@ import com.dccbigfred.android.R
 import com.dccbigfred.android.discovery.DiscoveredServer
 import com.dccbigfred.android.discovery.DiscoverySource
 import com.dccbigfred.android.discovery.ServerDiscovery
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +74,7 @@ fun DiscoveryScreen(
     var portInput by remember { mutableStateOf("8080") }
     var manualError by remember { mutableStateOf<String?>(null) }
     var manualBusy by remember { mutableStateOf(false) }
+    var manualExpanded by remember { mutableStateOf(false) }
 
     val errorHostRequired = stringResource(R.string.discovery_error_host_required)
     val errorUnreachable = stringResource(R.string.discovery_error_unreachable)
@@ -98,6 +107,7 @@ fun DiscoveryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = { Text(stringResource(R.string.discovery_title)) },
                 actions = {
                     IconButton(
@@ -116,89 +126,134 @@ fun DiscoveryScreen(
             )
         },
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(padding),
         ) {
-            if (scanning) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(stringResource(R.string.discovery_scanning))
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            Image(
+                painter = painterResource(R.drawable.ic_bigfred_logo),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(200.dp)
+                    .align(Alignment.Center)
+                    .alpha(0.2f),
+            )
 
-            LazyColumn(
-                modifier = Modifier.weight(1f, fill = true),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
             ) {
-                if (servers.isEmpty() && !scanning) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.discovery_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
+                Text(
+                    text = stringResource(R.string.discovery_intro),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (scanning) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(stringResource(R.string.discovery_scanning))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f, fill = true),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (servers.isEmpty() && !scanning) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.discovery_empty),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(15.dp),
+                            )
+                        }
+                    }
+                    items(servers, key = { it.baseUrl }) { server ->
+                        ServerRow(server = server, onClick = { onServerSelected(server.baseUrl) })
+                        HorizontalDivider()
                     }
                 }
-                items(servers, key = { it.baseUrl }) { server ->
-                    ServerRow(server = server, onClick = { onServerSelected(server.baseUrl) })
-                    HorizontalDivider()
-                }
-            }
 
-            Text(stringResource(R.string.discovery_manual), style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = hostInput,
-                onValueChange = {
-                    hostInput = it
-                    manualError = null
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.discovery_host_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Next,
-                ),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = portInput,
-                onValueChange = { portInput = it.filter { c -> c.isDigit() }.take(5) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.discovery_port_label)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { submitManual() }),
-            )
-            if (manualError != null) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(manualError!!, color = MaterialTheme.colorScheme.error)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = { submitManual() },
-                enabled = !manualBusy,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (manualBusy) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { manualExpanded = !manualExpanded }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.discovery_manual),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (manualExpanded) {
+                            Icons.Default.ExpandLess
+                        } else {
+                            Icons.Default.ExpandMore
+                        },
+                        contentDescription = null,
+                    )
                 }
-                Text(stringResource(R.string.discovery_connect))
+                AnimatedVisibility(visible = manualExpanded) {
+                    Column {
+                        OutlinedTextField(
+                            value = hostInput,
+                            onValueChange = {
+                                hostInput = it
+                                manualError = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.discovery_host_label)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Uri,
+                                imeAction = ImeAction.Next,
+                            ),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = portInput,
+                            onValueChange = { portInput = it.filter { c -> c.isDigit() }.take(5) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.discovery_port_label)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(onDone = { submitManual() }),
+                        )
+                        if (manualError != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(manualError!!, color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { submitManual() },
+                            enabled = !manualBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (manualBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(stringResource(R.string.discovery_connect))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

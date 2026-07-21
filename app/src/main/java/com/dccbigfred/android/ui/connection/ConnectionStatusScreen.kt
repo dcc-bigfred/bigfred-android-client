@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dccbigfred.android.R
 import com.dccbigfred.android.network.IcmpPinger
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import kotlinx.coroutines.delay
 import kotlin.math.max
 
@@ -94,6 +95,7 @@ fun ConnectionStatusScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = { Text(stringResource(R.string.connection_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

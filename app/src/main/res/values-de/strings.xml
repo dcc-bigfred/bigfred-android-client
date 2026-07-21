@@ -15,6 +15,10 @@
     <string name="menu_models">Modellkatalog</string>
     <string name="menu_my_vehicles">Meine Fahrzeuge auf dem Telefon</string>
     <string name="menu_about">Über</string>
+    <string name="menu_os_management">OS-Verwaltung</string>
+    <string name="menu_monitoring">Monitoring</string>
+    <string name="menu_logout">Vom Server abmelden</string>
+    <string name="menu_open_external_failed">Keine App zum Öffnen dieses Links verfügbar</string>
 
     <!-- Models catalog -->
     <string name="models_title">Modellkatalog</string>
@@ -97,6 +101,7 @@
 
     <!-- Discovery -->
     <string name="discovery_title">BigFred-Server wählen</string>
+    <string name="discovery_intro">Verbinden Sie sich mit einem lokalen Heim- oder Clubserver, um Fahrzeuge zu steuern. Weitere Optionen finden Sie im Menü auf der linken Seite. Ohne Serververbindung können Sie Ihren Fahrzeugbestand in der App verwalten und später einfach auf einen beliebigen Server kopieren, sobald das Telefon in Reichweite ist — zum Beispiel beim Clubtreffen.</string>
     <string name="discovery_scanning">Netzwerk wird gescannt…</string>
     <string name="discovery_empty">Kein Server gefunden. Prüfen Sie Wi‑Fi oder geben Sie die Adresse manuell ein.</string>
     <string name="discovery_manual">Manuell</string>
@@ -116,6 +121,10 @@
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_german">Deutsch</string>
+    <string name="settings_theme_section">Design</string>
+    <string name="settings_theme_system">Systemstandard</string>
+    <string name="settings_theme_light">Hell</string>
+    <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_server_hint">BigFred-Adresse (z. B. http://bigfred.local:8080 oder http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">Server-URL</string>
@@ -135,6 +144,10 @@
     <string name="connection_chart_time">Zeit →</string>
     <string name="connection_wifi_lock_active">Wi‑Fi Low-Latency-Sperre: aktiv</string>
     <string name="connection_wifi_lock_inactive">Wi‑Fi Low-Latency-Sperre: inaktiv</string>
+
+    <!-- WebView connection error -->
+    <string name="webview_connection_error">Verbindung zum BigFred-Server nicht möglich</string>
+    <string name="webview_retry">Erneut versuchen</string>
 
     <!-- About -->
     <string name="about_title">Über</string>

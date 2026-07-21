@@ -74,6 +74,7 @@ import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.localvehicles.LocalVehicleEntity
 import com.dccbigfred.android.models.CatalogIcon
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
@@ -104,6 +105,7 @@ fun MyVehiclesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = { Text(stringResource(R.string.my_vehicles_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -406,7 +408,9 @@ private fun MyVehiclesTable(
             if (rows.isEmpty()) {
                 Text(
                     stringResource(R.string.my_vehicles_empty),
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(15.dp),
                 )
             }
         }

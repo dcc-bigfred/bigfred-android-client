@@ -15,6 +15,10 @@
     <string name="menu_models">Model catalog</string>
     <string name="menu_my_vehicles">My vehicles on phone</string>
     <string name="menu_about">About</string>
+    <string name="menu_os_management">OS management</string>
+    <string name="menu_monitoring">Monitoring</string>
+    <string name="menu_logout">Log out from server</string>
+    <string name="menu_open_external_failed">No app available to open this link</string>
 
     <!-- Models catalog -->
     <string name="models_title">Model catalog</string>
@@ -97,6 +101,7 @@
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>
+    <string name="discovery_intro">Connect to a local home or club server to control vehicles. Extra options are in the drawer menu on the left. Without a server connection you can manage your rolling stock in the app and easily copy it to any server once your phone is in range — for example at a club meet.</string>
     <string name="discovery_scanning">Scanning network…</string>
     <string name="discovery_empty">No server found. Check Wi‑Fi or enter an address manually.</string>
     <string name="discovery_manual">Manual</string>
@@ -116,6 +121,10 @@
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_german">Deutsch</string>
+    <string name="settings_theme_section">Theme</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_server_hint">BigFred address (e.g. http://bigfred.local:8080 or http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">Server URL</string>
@@ -135,6 +144,10 @@
     <string name="connection_chart_time">time →</string>
     <string name="connection_wifi_lock_active">Wi‑Fi low-latency lock: active</string>
     <string name="connection_wifi_lock_inactive">Wi‑Fi low-latency lock: inactive</string>
+
+    <!-- WebView connection error -->
+    <string name="webview_connection_error">Cannot connect to the BigFred server</string>
+    <string name="webview_retry">Try again</string>
 
     <!-- About -->
     <string name="about_title">About</string>
