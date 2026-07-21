@@ -1,5 +1,6 @@
 package com.dccbigfred.android.ui.myvehicles
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,18 +25,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsRailway
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -51,6 +60,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +85,10 @@ fun MyVehiclesScreen(
     viewModel: MyVehiclesViewModel = viewModel(),
 ) {
     val vehicles by viewModel.vehicles.collectAsStateWithLifecycle()
+    val selected by viewModel.selected.collectAsStateWithLifecycle()
+    val rowFlash by viewModel.rowFlash.collectAsStateWithLifecycle()
+    val banners by viewModel.banners.collectAsStateWithLifecycle()
+    val sort by viewModel.sort.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var editing by remember { mutableStateOf<LocalVehicleEntity?>(null) }
@@ -100,9 +114,34 @@ fun MyVehiclesScreen(
                 },
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { editing = viewModel.newEntity() }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.my_vehicles_add))
+        bottomBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { editing = viewModel.newEntity() },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        stringResource(R.string.my_vehicles_add),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Button(
+                    onClick = viewModel::syncSelected,
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        stringResource(R.string.my_vehicles_send_selected, selected.size),
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -117,10 +156,31 @@ fun MyVehiclesScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
+            if (banners.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    banners.forEach { banner ->
+                        ErrorBanner(
+                            banner = banner,
+                            onDismiss = { viewModel.dismissBanner(banner.id) },
+                        )
+                    }
+                }
+            }
             MyVehiclesTable(
                 rows = vehicles,
+                selected = selected,
+                rowFlash = rowFlash,
+                sortColumn = sort?.first,
+                sortAsc = sort?.second ?: true,
+                onSort = viewModel::toggleSort,
                 menuForUuid = menuForUuid,
                 onMenuChange = { menuForUuid = it },
+                onToggleSelected = viewModel::toggleSelected,
                 onEdit = { editing = it },
                 onDelete = { viewModel.delete(it) },
                 onSync = { viewModel.sync(it) },
@@ -145,10 +205,54 @@ fun MyVehiclesScreen(
 }
 
 @Composable
+private fun ErrorBanner(
+    banner: BannerError,
+    onDismiss: () -> Unit,
+) {
+    val reason = if (banner.reasonArg != null) {
+        stringResource(banner.reasonResId, banner.reasonArg)
+    } else {
+        stringResource(banner.reasonResId)
+    }
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.my_vehicles_banner_error, banner.vehicleName, reason),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.my_vehicles_dismiss),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MyVehiclesTable(
     rows: List<LocalVehicleEntity>,
+    selected: Set<String>,
+    rowFlash: Map<String, RowFlash>,
+    sortColumn: MyVehicleSortColumn?,
+    sortAsc: Boolean,
+    onSort: (MyVehicleSortColumn) -> Unit,
     menuForUuid: String?,
     onMenuChange: (String?) -> Unit,
+    onToggleSelected: (String) -> Unit,
     onEdit: (LocalVehicleEntity) -> Unit,
     onDelete: (LocalVehicleEntity) -> Unit,
     onSync: (LocalVehicleEntity) -> Unit,
@@ -164,14 +268,70 @@ private fun MyVehiclesTable(
                 .padding(vertical = 8.dp, horizontal = 4.dp),
         ) {
             HeaderCell(stringResource(R.string.my_vehicles_col_icon), 64.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_name), 140.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_kind), 120.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_number), 140.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_carrier), 120.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_assignment), 120.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_revision), 100.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_epoch), 80.dp)
-            HeaderCell(stringResource(R.string.my_vehicles_col_dcc), 80.dp)
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_name),
+                140.dp,
+                MyVehicleSortColumn.NAME,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_kind),
+                120.dp,
+                MyVehicleSortColumn.KIND,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_number),
+                140.dp,
+                MyVehicleSortColumn.NUMBER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_carrier),
+                120.dp,
+                MyVehicleSortColumn.CARRIER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_assignment),
+                120.dp,
+                MyVehicleSortColumn.ASSIGNMENT,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_revision),
+                100.dp,
+                MyVehicleSortColumn.REVISION,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_epoch),
+                80.dp,
+                MyVehicleSortColumn.EPOCH,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.my_vehicles_col_dcc),
+                80.dp,
+                MyVehicleSortColumn.DCC_ADDRESS,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             Column(
@@ -184,6 +344,9 @@ private fun MyVehiclesTable(
                     Box {
                         VehicleTableRow(
                             row = row,
+                            selected = row.uuid in selected,
+                            flash = rowFlash[row.uuid],
+                            onClick = { onToggleSelected(row.uuid) },
                             onLongClick = { onMenuChange(row.uuid) },
                         )
                         DropdownMenu(
@@ -229,14 +392,31 @@ private fun MyVehiclesTable(
 @Composable
 private fun VehicleTableRow(
     row: LocalVehicleEntity,
+    selected: Boolean,
+    flash: RowFlash?,
+    onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val flashColor = when (flash) {
+        RowFlash.SUCCESS -> MaterialTheme.colorScheme.tertiaryContainer
+        RowFlash.ERROR -> MaterialTheme.colorScheme.errorContainer
+        null -> Color.Transparent
+    }
+    val selectedColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        Color.Transparent
+    }
+    val target = if (flash != null) flashColor else selectedColor
+    val bg by animateColorAsState(targetValue = target, label = "rowFlash")
+
     Row(
         modifier = Modifier
             .height(RowHeight)
+            .background(bg)
             .combinedClickable(
-                onClick = {},
+                onClick = onClick,
                 onLongClick = onLongClick,
             )
             .padding(vertical = 4.dp, horizontal = 4.dp),
@@ -276,15 +456,43 @@ private fun VehicleTableRow(
 }
 
 @Composable
-private fun HeaderCell(text: String, width: Dp) {
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.width(width).padding(horizontal = 4.dp),
-    )
+private fun HeaderCell(
+    text: String,
+    width: Dp,
+    sortColumn: MyVehicleSortColumn? = null,
+    activeColumn: MyVehicleSortColumn? = null,
+    sortAsc: Boolean = true,
+    onSort: (MyVehicleSortColumn) -> Unit = {},
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .width(width)
+            .then(
+                if (sortColumn != null) {
+                    Modifier.clickable { onSort(sortColumn) }
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 4.dp),
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (sortColumn != null && sortColumn == activeColumn) {
+            Icon(
+                imageVector = if (sortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
 }
 
 @Composable
@@ -525,38 +733,60 @@ private fun IconPickerDialog(
     onPick: (CatalogIcon) -> Unit,
 ) {
     val context = LocalContext.current
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, icons) {
+        if (query.isBlank()) {
+            icons
+        } else {
+            icons.filter { it.vehicleNumber?.contains(query.trim(), ignoreCase = true) == true }
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.my_vehicles_pick_icon)) },
         text = {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(96.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(360.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(icons, key = { it.imagePath }) { icon ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clickable { onPick(icon) }
-                            .padding(4.dp),
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data("file:///android_asset/${icon.imagePath}")
-                                .build(),
-                            contentDescription = icon.vehicleNumber,
-                            modifier = Modifier.size(64.dp),
-                        )
-                        Text(
-                            text = icon.vehicleNumber?.takeIf { it.isNotBlank() } ?: "—",
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.my_vehicles_icon_search)) },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                )
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(96.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(360.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(filtered, key = { it.imagePath }) { icon ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clickable { onPick(icon) }
+                                .padding(4.dp),
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data("file:///android_asset/${icon.imagePath}")
+                                    .build(),
+                                contentDescription = icon.vehicleNumber,
+                                modifier = Modifier.size(64.dp),
+                            )
+                            Text(
+                                text = icon.vehicleNumber?.takeIf { it.isNotBlank() } ?: "—",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }

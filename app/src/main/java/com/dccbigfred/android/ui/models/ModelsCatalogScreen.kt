@@ -24,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.Button
@@ -70,6 +72,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
+import com.dccbigfred.android.models.ModelSortColumn
 import kotlin.math.floor
 import kotlin.math.max
 import kotlinx.coroutines.launch
@@ -184,6 +187,9 @@ fun ModelsCatalogScreen(
                         rows = state.page.rows,
                         loading = state.loading,
                         selectedId = if (pickerMode) selectedRow?.id else null,
+                        sortColumn = state.filters.sortColumn,
+                        sortAsc = state.filters.sortAsc,
+                        onSort = viewModel::toggleSort,
                         onRowClick = if (pickerMode) {
                             { row -> selectedRow = row }
                         } else {
@@ -431,6 +437,9 @@ private fun ModelsTable(
     selectedId: Long?,
     onRowClick: ((ModelRow) -> Unit)?,
     onPageSizeChanged: (Int) -> Unit,
+    sortColumn: ModelSortColumn? = null,
+    sortAsc: Boolean = true,
+    onSort: (ModelSortColumn) -> Unit = {},
     menuForId: Long? = null,
     onMenuChange: (Long?) -> Unit = {},
     onAddToMyVehicles: ((ModelRow) -> Unit)? = null,
@@ -457,18 +466,102 @@ private fun ModelsTable(
                 .padding(vertical = 8.dp, horizontal = 4.dp),
         ) {
             HeaderCell(stringResource(R.string.models_col_image), 64.dp)
-            HeaderCell(stringResource(R.string.models_col_vehicle_number), 160.dp)
-            HeaderCell(stringResource(R.string.models_col_assignment), 120.dp)
-            HeaderCell(stringResource(R.string.models_col_revision), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_epoch), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_manufacturer), 110.dp)
-            HeaderCell(stringResource(R.string.models_col_catalog), 90.dp)
-            HeaderCell(stringResource(R.string.models_col_scale), 56.dp)
-            HeaderCell(stringResource(R.string.models_col_release), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_vehicle_kind), 160.dp)
-            HeaderCell(stringResource(R.string.models_col_type), 100.dp)
-            HeaderCell(stringResource(R.string.models_col_carrier), 130.dp)
-            HeaderCell(stringResource(R.string.models_col_livery), 160.dp)
+            HeaderCell(
+                stringResource(R.string.models_col_vehicle_number),
+                160.dp,
+                ModelSortColumn.VEHICLE_NUMBER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_assignment),
+                120.dp,
+                ModelSortColumn.ASSIGNMENT,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_revision),
+                100.dp,
+                ModelSortColumn.REVISION,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_epoch),
+                100.dp,
+                ModelSortColumn.EPOCH,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_manufacturer),
+                110.dp,
+                ModelSortColumn.MANUFACTURER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_catalog),
+                90.dp,
+                ModelSortColumn.CATALOG,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_scale),
+                56.dp,
+                ModelSortColumn.SCALE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_release),
+                100.dp,
+                ModelSortColumn.RELEASE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_vehicle_kind),
+                160.dp,
+                ModelSortColumn.VEHICLE_KIND,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_type),
+                100.dp,
+                ModelSortColumn.TYPE,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_carrier),
+                130.dp,
+                ModelSortColumn.CARRIER,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
+            HeaderCell(
+                stringResource(R.string.models_col_livery),
+                160.dp,
+                ModelSortColumn.LIVERY,
+                sortColumn,
+                sortAsc,
+                onSort,
+            )
         }
         Box(
             modifier = Modifier
@@ -524,17 +617,43 @@ private fun ModelsTable(
 }
 
 @Composable
-private fun HeaderCell(text: String, width: Dp) {
-    Text(
-        text = text,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
+private fun HeaderCell(
+    text: String,
+    width: Dp,
+    sortColumn: ModelSortColumn? = null,
+    activeColumn: ModelSortColumn? = null,
+    sortAsc: Boolean = true,
+    onSort: (ModelSortColumn) -> Unit = {},
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .width(width)
+            .then(
+                if (sortColumn != null) {
+                    Modifier.clickable { onSort(sortColumn) }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 4.dp),
-    )
+    ) {
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (sortColumn != null && sortColumn == activeColumn) {
+            Icon(
+                imageVector = if (sortAsc) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

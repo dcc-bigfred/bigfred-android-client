@@ -58,6 +58,11 @@ class ModelsRepository(
         val safePage = page.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
         val offset = safePage * safePageSize
 
+        val order = filters.sortColumn?.let { col ->
+            val dir = if (filters.sortAsc) "ASC" else "DESC"
+            "ORDER BY ${col.sql} $dir, m.manufacturer COLLATE NOCASE, m.catalog_number COLLATE NOCASE"
+        } ?: "ORDER BY m.manufacturer COLLATE NOCASE, m.catalog_number COLLATE NOCASE"
+
         val sql = """
             SELECT m.id, m.manufacturer, m.catalog_number, m.image_path, m.scale,
                    m.release_date, m.release_date_precision, m.vehicle_kind, m.type,
@@ -65,7 +70,7 @@ class ModelsRepository(
                    m.revision_date_precision, m.livery
             FROM models m
             WHERE $where
-            ORDER BY m.manufacturer COLLATE NOCASE, m.catalog_number COLLATE NOCASE
+            $order
             LIMIT ? OFFSET ?
         """.trimIndent()
 

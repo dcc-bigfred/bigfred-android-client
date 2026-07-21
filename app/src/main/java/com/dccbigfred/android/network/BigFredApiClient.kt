@@ -19,13 +19,12 @@ class BigFredApiClient(
     sealed interface SyncResult {
         data object Success : SyncResult
         data object Unauthorized : SyncResult
-        data class Conflict(val code: String) : SyncResult
-        data class Error(val detail: String) : SyncResult
+        data class Failure(val code: String) : SyncResult
     }
 
     suspend fun upsertVehicle(v: LocalVehicleEntity): SyncResult = withContext(Dispatchers.IO) {
         val baseUrl = serverPreferences.serverBaseUrl.first()
-            ?: return@withContext SyncResult.Error("no_server")
+            ?: return@withContext SyncResult.Failure("no_server")
         val cookie = sessionCookie(baseUrl)
             ?: return@withContext SyncResult.Unauthorized
 
@@ -47,13 +46,16 @@ class BigFredApiClient(
             .put(body)
             .build()
 
-        client.newCall(req).execute().use { resp ->
-            when {
-                resp.isSuccessful -> SyncResult.Success
-                resp.code == 401 -> SyncResult.Unauthorized
-                resp.code == 409 -> SyncResult.Conflict(parseErrorCode(resp.body?.string()))
-                else -> SyncResult.Error("http_${resp.code}")
+        try {
+            client.newCall(req).execute().use { resp ->
+                when {
+                    resp.isSuccessful -> SyncResult.Success
+                    resp.code == 401 -> SyncResult.Unauthorized
+                    else -> SyncResult.Failure(parseErrorCode(resp.body?.string(), resp.code))
+                }
             }
+        } catch (_: Exception) {
+            SyncResult.Failure("network_error")
         }
     }
 
@@ -64,12 +66,12 @@ class BigFredApiClient(
             ?.firstOrNull { it.startsWith("bigfred_session=") }
     }
 
-    private fun parseErrorCode(body: String?): String {
-        if (body.isNullOrBlank()) return "conflict"
+    private fun parseErrorCode(body: String?, httpCode: Int): String {
+        if (body.isNullOrBlank()) return "http_$httpCode"
         return try {
-            JSONObject(body).optString("error", "conflict")
+            JSONObject(body).optString("error").takeIf { it.isNotBlank() } ?: "http_$httpCode"
         } catch (_: Exception) {
-            "conflict"
+            "http_$httpCode"
         }
     }
 

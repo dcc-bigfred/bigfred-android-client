@@ -76,8 +76,20 @@
     <string name="my_vehicles_cancel">Anuluj</string>
     <string name="my_vehicles_sync_ok">Zsynchronizowano z BigFredem</string>
     <string name="my_vehicles_sync_unauthorized">Najpierw zaloguj się w aplikacji BigFred</string>
-    <string name="my_vehicles_sync_conflict">Konflikt synchronizacji (np. adres DCC już zajęty)</string>
-    <string name="my_vehicles_sync_error">Synchronizacja nie powiodła się</string>
+    <string name="my_vehicles_sync_error">Synchronizacja nie powiodła się (%1$s)</string>
+    <string name="my_vehicles_sync_err_dcc_taken">Adres DCC jest już zajęty</string>
+    <string name="my_vehicles_sync_err_dcc_pool">Adres DCC spoza Twojej puli</string>
+    <string name="my_vehicles_sync_err_name_required">Nazwa pojazdu jest wymagana</string>
+    <string name="my_vehicles_sync_err_kind_invalid">Nieprawidłowy typ pojazdu</string>
+    <string name="my_vehicles_sync_err_epoch_invalid">Nieprawidłowa epoka</string>
+    <string name="my_vehicles_sync_err_revision_invalid">Nieprawidłowa data rewizji</string>
+    <string name="my_vehicles_sync_err_not_owned">Ten pojazd należy do innego użytkownika</string>
+    <string name="my_vehicles_sync_err_no_server">Brak skonfigurowanego serwera BigFred</string>
+    <string name="my_vehicles_sync_err_network">Błąd sieci</string>
+    <string name="my_vehicles_icon_search">Szukaj po numerze pojazdu</string>
+    <string name="my_vehicles_send_selected">Wyślij zaznaczone (%1$d)</string>
+    <string name="my_vehicles_banner_error">%1$s: %2$s</string>
+    <string name="my_vehicles_dismiss">Zamknij</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Wybierz serwer BigFred</string>
