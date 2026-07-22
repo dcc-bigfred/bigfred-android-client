@@ -1,5 +1,6 @@
 package com.dccbigfred.android.ui.navigation
 
+import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -47,6 +48,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.dccbigfred.android.BigFredApplication
+import com.dccbigfred.android.MainActivity
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
@@ -60,6 +62,8 @@ import com.dccbigfred.android.ui.myvehicles.MyVehiclesViewModel
 import com.dccbigfred.android.ui.settings.SettingsScreen
 import com.dccbigfred.android.ui.webview.BigFredWebViewScreen
 import com.dccbigfred.android.ui.webview.applyLocaleToWebView
+import com.dccbigfred.android.ui.webview.deliverThrottleHardwareKeys
+import com.dccbigfred.android.ui.webview.handleVolumeKeyEvent
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -74,6 +78,8 @@ fun BigFredApp() {
     val app = context.applicationContext as BigFredApplication
     val prefs = app.serverPreferences
     val savedUrl by prefs.serverBaseUrl.collectAsStateWithLifecycle(initialValue = null)
+    val volumeKeysThrottleEnabled by prefs.volumeKeysThrottleEnabled
+        .collectAsStateWithLifecycle(initialValue = ServerPreferences.DEFAULT_VOLUME_KEYS_THROTTLE_ENABLED)
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -83,6 +89,24 @@ fun BigFredApp() {
     var bootstrapped by remember { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
     var spaWebView by remember { mutableStateOf<WebView?>(null) }
+    val activity = context as MainActivity
+
+    DisposableEffect(spaWebView, volumeKeysThrottleEnabled) {
+        if (spaWebView == null || !volumeKeysThrottleEnabled) {
+            activity.volumeKeyInterceptor = null
+            return@DisposableEffect onDispose {
+                activity.volumeKeyInterceptor = null
+            }
+        }
+        activity.volumeKeyInterceptor = { event ->
+            handleVolumeKeyEvent(event) { direction ->
+                deliverThrottleHardwareKeys(spaWebView, direction)
+            }
+        }
+        onDispose {
+            activity.volumeKeyInterceptor = null
+        }
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -304,6 +328,10 @@ fun BigFredApp() {
                             }
                         },
                         onLocaleChanged = { pushLocaleToSpa() },
+                        volumeKeysThrottleEnabled = volumeKeysThrottleEnabled,
+                        onVolumeKeysThrottleEnabledChange = { enabled ->
+                            scope.launch { prefs.setVolumeKeysThrottleEnabled(enabled) }
+                        },
                     )
                 }
                 composable(Routes.CONNECTION) {

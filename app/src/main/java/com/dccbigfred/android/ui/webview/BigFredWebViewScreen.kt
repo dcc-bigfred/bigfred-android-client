@@ -267,6 +267,15 @@ private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?
     }
 }
 
+/** Ask the SPA to step throttle speed (+1 / -1). No-op if handler not registered. */
+fun deliverThrottleHardwareKeys(webView: WebView?, direction: Int) {
+    val view = webView ?: return
+    val script = throttleHardwareKeysJavascript(direction)
+    view.post {
+        view.evaluateJavascript(script, null)
+    }
+}
+
 /**
  * WebView that reports [View.VISIBLE] window visibility while [keepWindowVisible]
  * is true, so Chromium does not mark the page hidden when a drawer scrim or
