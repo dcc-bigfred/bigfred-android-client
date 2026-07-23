@@ -147,6 +147,13 @@
     <string name="connection_chart_time">czas →</string>
     <string name="connection_wifi_lock_active">Blokada Wi‑Fi low-latency: aktywna</string>
     <string name="connection_wifi_lock_inactive">Blokada Wi‑Fi low-latency: nieaktywna</string>
+    <string name="connection_gauge_min">min</string>
+    <string name="connection_gauge_p50">p50</string>
+    <string name="connection_gauge_p90">p90</string>
+    <string name="connection_gauge_p99">p99</string>
+    <string name="connection_gauge_empty">—</string>
+    <string name="connection_pause">Wstrzymaj pomiary</string>
+    <string name="connection_resume">Wznów pomiary</string>
 
     <!-- WebView connection error -->
     <string name="webview_connection_error">Nie można połączyć się z serwerem BigFred</string>

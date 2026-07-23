@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,11 +27,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -43,7 +50,6 @@ import com.dccbigfred.android.R
 import com.dccbigfred.android.network.IcmpPinger
 import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import kotlinx.coroutines.delay
-import kotlin.math.max
 
 data class LatencySample(
     val num: Int,
@@ -51,7 +57,7 @@ data class LatencySample(
     val atEpochMs: Long,
 )
 
-private const val MAX_SAMPLES = 30
+private const val MAX_SAMPLES = 50
 private const val PING_INTERVAL_MS = 1_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +71,15 @@ fun ConnectionStatusScreen(
     val endpoint = remember(serverUrl) { IcmpPinger.endpointFromBaseUrl(serverUrl) }
     val samples = remember { mutableStateListOf<LatencySample>() }
     var nextNum by remember { mutableIntStateOf(1) }
+    var paused by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val listAtTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 &&
+                listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val sloPalette = rememberLatencySloPalette()
     val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -74,23 +89,34 @@ fun ConnectionStatusScreen(
         samples.clear()
         nextNum = 1
         while (true) {
-            val latency = pinger.measureRttMs(endpoint.host, endpoint.port)
-            val sample = LatencySample(
-                num = nextNum,
-                latencyMs = latency,
-                atEpochMs = System.currentTimeMillis(),
-            )
-            nextNum += 1
-            samples.add(0, sample)
-            while (samples.size > MAX_SAMPLES) {
-                samples.removeAt(samples.lastIndex)
+            if (!paused) {
+                val latency = pinger.measureRttMs(endpoint.host, endpoint.port)
+                val sample = LatencySample(
+                    num = nextNum,
+                    latencyMs = latency,
+                    atEpochMs = System.currentTimeMillis(),
+                )
+                nextNum += 1
+                samples.add(0, sample)
+                while (samples.size > MAX_SAMPLES) {
+                    samples.removeAt(samples.lastIndex)
+                }
             }
             delay(PING_INTERVAL_MS)
         }
     }
 
+    LaunchedEffect(samples.firstOrNull()?.num, listAtTop) {
+        if (listAtTop && samples.isNotEmpty()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     // Chart uses chronological order (oldest → newest left to right).
     val chartSamples = samples.toList().asReversed().filter { it.latencyMs != null }
+    val successfulMs = chartSamples.mapNotNull { it.latencyMs }
+    val summary = LatencySummary.from(successfulMs)
+    val scaleMaxMs = latencyScaleMaxMs(successfulMs)
 
     Scaffold(
         topBar = {
@@ -132,11 +158,19 @@ fun ConnectionStatusScreen(
                 gridColor = gridColor,
                 labelColor = labelColor,
                 timeAxisLabel = chartTimeLabel,
+                yMaxMs = scaleMaxMs,
+                sloPalette = sloPalette,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            LatencyGaugesRow(
+                summary = summary,
+                maxMs = scaleMaxMs,
+                sloPalette = sloPalette,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -157,7 +191,10 @@ fun ConnectionStatusScreen(
                 )
             }
             HorizontalDivider()
-            LazyColumn(modifier = Modifier.weight(1f, fill = true)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f, fill = true),
+            ) {
                 items(samples, key = { it.num }) { sample ->
                     Row(
                         modifier = Modifier
@@ -177,33 +214,45 @@ fun ConnectionStatusScreen(
                             modifier = Modifier.weight(0.65f),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.End,
-                            color = if (sample.latencyMs == null) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
+                            color = sample.latencyMs?.let { sloPalette.colorFor(it) }
+                                ?: MaterialTheme.colorScheme.error,
                         )
                     }
                     HorizontalDivider()
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(
-                    if (wifiLockHeld) {
-                        R.string.connection_wifi_lock_active
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        if (wifiLockHeld) {
+                            R.string.connection_wifi_lock_active
+                        } else {
+                            R.string.connection_wifi_lock_inactive
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (wifiLockHeld) {
+                        MaterialTheme.colorScheme.primary
                     } else {
-                        R.string.connection_wifi_lock_inactive
+                        MaterialTheme.colorScheme.error
                     },
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (wifiLockHeld) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+                    modifier = Modifier.weight(1f),
+                )
+                FilledTonalIconButton(onClick = { paused = !paused }) {
+                    Icon(
+                        imageVector = if (paused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                        contentDescription = stringResource(
+                            if (paused) R.string.connection_resume else R.string.connection_pause,
+                        ),
+                    )
+                }
+            }
         }
     }
 }
@@ -215,9 +264,12 @@ private fun LatencyChart(
     gridColor: androidx.compose.ui.graphics.Color,
     labelColor: androidx.compose.ui.graphics.Color,
     timeAxisLabel: String,
+    yMaxMs: Long,
+    sloPalette: LatencySlo.Palette,
     modifier: Modifier = Modifier,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val yMax = yMaxMs.toFloat()
     Canvas(modifier = modifier) {
         val leftPad = 48.dp.toPx()
         val rightPad = 12.dp.toPx()
@@ -226,9 +278,6 @@ private fun LatencyChart(
         val plotW = size.width - leftPad - rightPad
         val plotH = size.height - topPad - bottomPad
         if (plotW <= 0f || plotH <= 0f) return@Canvas
-
-        val maxMs = max(50L, samples.maxOfOrNull { it.latencyMs ?: 0L } ?: 50L)
-        val yMax = ((maxMs + 9) / 10) * 10f
 
         // Horizontal grid + Y labels
         val paint = android.graphics.Paint().apply {
@@ -274,6 +323,18 @@ private fun LatencyChart(
             strokeWidth = 2f,
         )
 
+        // SLO threshold lines (50 / 200 / 300 ms).
+        for (thresholdMs in LatencySlo.thresholdLinesMs) {
+            if (thresholdMs > yMaxMs) continue
+            val y = topPad + plotH * (1f - (thresholdMs.toFloat() / yMax).coerceIn(0f, 1f))
+            drawLine(
+                color = sloPalette.colorForThreshold(thresholdMs),
+                start = Offset(leftPad, y),
+                end = Offset(leftPad + plotW, y),
+                strokeWidth = 2.dp.toPx(),
+            )
+        }
+
         if (samples.isEmpty()) return@Canvas
 
         val path = Path()
@@ -286,7 +347,11 @@ private fun LatencyChart(
             }
             val y = topPad + plotH * (1f - (ms.toFloat() / yMax).coerceIn(0f, 1f))
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            drawCircle(color = lineColor, radius = 4.dp.toPx(), center = Offset(x, y))
+            drawCircle(
+                color = sloPalette.colorFor(ms),
+                radius = 4.dp.toPx(),
+                center = Offset(x, y),
+            )
         }
         drawPath(
             path = path,

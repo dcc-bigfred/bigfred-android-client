@@ -147,6 +147,13 @@
     <string name="connection_chart_time">time →</string>
     <string name="connection_wifi_lock_active">Wi‑Fi low-latency lock: active</string>
     <string name="connection_wifi_lock_inactive">Wi‑Fi low-latency lock: inactive</string>
+    <string name="connection_gauge_min">min</string>
+    <string name="connection_gauge_p50">p50</string>
+    <string name="connection_gauge_p90">p90</string>
+    <string name="connection_gauge_p99">p99</string>
+    <string name="connection_gauge_empty">—</string>
+    <string name="connection_pause">Pause sampling</string>
+    <string name="connection_resume">Resume sampling</string>
 
     <!-- WebView connection error -->
     <string name="webview_connection_error">Cannot connect to the BigFred server</string>
