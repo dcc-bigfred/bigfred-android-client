@@ -1,6 +1,5 @@
 package com.dccbigfred.android.ui.navigation
 
-import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -89,13 +88,18 @@ fun BigFredApp() {
     var bootstrapped by remember { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
     var spaWebView by remember { mutableStateOf<WebView?>(null) }
-    val activity = context as MainActivity
+    var throttleHardwareKeysActive by remember { mutableStateOf(false) }
+    val activity = context as? MainActivity
 
-    DisposableEffect(spaWebView, volumeKeysThrottleEnabled) {
-        if (spaWebView == null || !volumeKeysThrottleEnabled) {
-            activity.volumeKeyInterceptor = null
+    DisposableEffect(spaWebView, volumeKeysThrottleEnabled, throttleHardwareKeysActive, activity) {
+        if (activity == null ||
+            spaWebView == null ||
+            !volumeKeysThrottleEnabled ||
+            !throttleHardwareKeysActive
+        ) {
+            activity?.volumeKeyInterceptor = null
             return@DisposableEffect onDispose {
-                activity.volumeKeyInterceptor = null
+                activity?.volumeKeyInterceptor = null
             }
         }
         activity.volumeKeyInterceptor = { event ->
@@ -285,6 +289,9 @@ fun BigFredApp() {
                         BigFredWebViewScreen(
                             baseUrl = webSessionUrl,
                             onWebViewReady = { spaWebView = it },
+                            onThrottleHardwareKeysActive = { active ->
+                                throttleHardwareKeysActive = active
+                            },
                         )
                     }
                 }

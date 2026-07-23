@@ -19,7 +19,7 @@ Two pull requests:
 | One press | 5% of `maxSpeed` (`Math.max(1, Math.round(maxSpeed * 0.05))`) |
 | Hold | Android system key-repeat (`ACTION_DOWN` with `repeatCount`) |
 | Settings toggle | **On by default** — “Use volume buttons to control vehicle speed” |
-| Toggle **on** | Volume keys consumed while WebView session is alive; no system volume in app; steps apply only on Throttle (no-op elsewhere) |
+| Toggle **on** | Volume keys consumed **only while a Throttle surface is active** (SPA registers via `setThrottleHardwareKeysActive`); elsewhere system volume works normally |
 | Toggle **off** | Normal system volume everywhere |
 
 ---
@@ -33,18 +33,21 @@ sequenceDiagram
   participant Pref as DataStore
   participant WV as spaWebView
   participant SPA as ConnectedThrottle
+  SPA->>Act: setThrottleHardwareKeysActive(true)
   HW->>Act: KEYCODE_VOLUME_UP_DOWN
   Act->>Pref: volumeKeysThrottleEnabled?
-  alt toggle OFF or no WebView
+  alt toggle OFF or no active throttle surface
     Act->>Act: super.dispatchKeyEvent
-  else toggle ON and WebView live
+  else toggle ON and throttle active
     Act->>WV: evaluateJavascript
     WV->>SPA: __bigfredThrottleHardwareKeys(+1|-1)
-    SPA->>SPA: handleSpeed(cockpitSpeed ± 5%)
+    SPA->>SPA: handleSpeed(appliedSpeed ± 5%)
   end
 ```
 
 Volume keys do **not** reach the WebView as DOM `keydown` events. They are caught in `Activity.dispatchKeyEvent` and injected via `evaluateJavascript` (same pattern as `__bigfredSetLocale` / `__bigfredOnModelPicked`).
+
+The SPA tells the shell when a throttle surface mounts/unmounts via `BigFredNativeApp.setThrottleHardwareKeysActive(boolean)`, so volume keys keep normal system behaviour outside Throttle / takeover.
 
 ### Web stack
 
@@ -89,7 +92,8 @@ __bigfredThrottleHardwareKeys
 | Same path as `handleSpeed` | Debounce, train/loco, optimistic override — no DCC duplication |
 | `disabled` only when no drive target | Volume works even with gamepad mapping dialog open |
 | Interceptor in `Activity`, not `WebView` | Volume keys go to the focused window, not Chromium keyboard |
-| Consume `ACTION_UP` too | Prevents system volume change on key release |
+| Consume only while SPA reports throttle active | `setThrottleHardwareKeysActive` — system volume works outside Throttle |
+| Consume `ACTION_UP` too | Prevents system volume change on key release while claimed |
 | Toggle in native Settings only | Single configuration surface; SPA stays unaware |
 | Default on | Primary use case: phone as throttle pilot |
 | Pure functions + JUnit | Existing test setup; no Robolectric/Espresso cost |

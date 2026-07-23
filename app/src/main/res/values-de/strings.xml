@@ -118,7 +118,7 @@
     <string name="settings_language_german">Deutsch</string>
     <string name="settings_controls_section">Steuerung</string>
     <string name="settings_volume_keys_throttle">Lautstärketasten zur Geschwindigkeitssteuerung verwenden</string>
-    <string name="settings_volume_keys_throttle_hint">Wenn aktiv, ändern die Tasten die Systemlautstärke in der App nicht. Wirken nur auf dem Throttle-Bildschirm.</string>
+    <string name="settings_volume_keys_throttle_hint">Wenn aktiv, steuern die Tasten die Geschwindigkeit auf dem Throttle-Bildschirm und ändern dort nicht die Systemlautstärke. Außerhalb behalten sie das normale Systemverhalten.</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_server_hint">BigFred-Adresse (z. B. http://bigfred.local:8080 oder http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">Server-URL</string>
