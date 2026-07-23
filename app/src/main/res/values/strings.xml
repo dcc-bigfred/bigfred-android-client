@@ -125,6 +125,9 @@
     <string name="settings_theme_system">System default</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+    <string name="settings_controls_section">Controls</string>
+    <string name="settings_volume_keys_throttle">Use volume buttons to control vehicle speed</string>
+    <string name="settings_volume_keys_throttle_hint">When enabled, volume keys control speed on the Throttle screen and do not change system volume there. Elsewhere in the app they keep normal system behaviour.</string>
     <string name="settings_server_section">Server</string>
     <string name="settings_server_hint">BigFred address (e.g. http://bigfred.local:8080 or http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">Server URL</string>

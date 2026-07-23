@@ -69,6 +69,7 @@ import org.json.JSONObject
 fun BigFredWebViewScreen(
     baseUrl: String,
     onWebViewReady: ((WebView?) -> Unit)? = null,
+    onThrottleHardwareKeysActive: ((Boolean) -> Unit)? = null,
 ) {
     // Freeze the URL for this WebView session so DataStore / nav recompositions
     // with the same address do not trigger a reload (which would churn the WS).
@@ -80,6 +81,7 @@ fun BigFredWebViewScreen(
     var pickerVisible by remember { mutableStateOf(false) }
     val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
     val onReady by rememberUpdatedState(onWebViewReady)
+    val onHardwareKeysActive by rememberUpdatedState(onThrottleHardwareKeysActive)
     val lifecycleOwner = LocalLifecycleOwner.current
 
     BackHandler(enabled = pickerVisible) {
@@ -174,6 +176,9 @@ fun BigFredWebViewScreen(
                             onOpenModelPicker = {
                                 post { openPicker() }
                             },
+                            onThrottleHardwareKeysActive = { active ->
+                                post { onHardwareKeysActive?.invoke(active) }
+                            },
                         ),
                         "BigFredNativeApp",
                     )
@@ -201,6 +206,9 @@ fun BigFredWebViewScreen(
                         ) {
                             loading = true
                             loadError = null
+                            // Navigation clears SPA handlers; reclaim system volume until
+                            // a throttle surface re-registers.
+                            onHardwareKeysActive?.invoke(false)
                         }
 
                         override fun doUpdateVisitedHistory(
@@ -386,6 +394,15 @@ private fun deliverModelPickResult(webView: WebView?, payload: ModelPickPayload?
     // $arg is already JSON (or "null") from org.json — safe to interpolate as-is.
     val script =
         "(function(){var r=window.__bigfredOnModelPicked;if(typeof r==='function'){r($arg);}})();"
+    view.post {
+        view.evaluateJavascript(script, null)
+    }
+}
+
+/** Ask the SPA to step throttle speed (+1 / -1). No-op if handler not registered. */
+fun deliverThrottleHardwareKeys(webView: WebView?, direction: Int) {
+    val view = webView ?: return
+    val script = throttleHardwareKeysJavascript(direction)
     view.post {
         view.evaluateJavascript(script, null)
     }

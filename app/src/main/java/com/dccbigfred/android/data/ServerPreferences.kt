@@ -3,6 +3,7 @@ package com.dccbigfred.android.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,6 +19,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 class ServerPreferences(private val context: Context) {
     private val serverBaseUrlKey = stringPreferencesKey("server_base_url")
+    private val volumeKeysThrottleEnabledKey =
+        booleanPreferencesKey("volume_keys_throttle_enabled")
     private val themeModeKey = stringPreferencesKey("theme_mode")
 
     private val themeSyncPrefs =
@@ -25,6 +28,17 @@ class ServerPreferences(private val context: Context) {
 
     val serverBaseUrl: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[serverBaseUrlKey]?.takeIf { it.isNotBlank() }
+    }
+
+    /** When true, volume keys step throttle speed in the SPA WebView. Default on. */
+    val volumeKeysThrottleEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[volumeKeysThrottleEnabledKey] ?: DEFAULT_VOLUME_KEYS_THROTTLE_ENABLED
+    }
+
+    suspend fun setVolumeKeysThrottleEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[volumeKeysThrottleEnabledKey] = enabled
+        }
     }
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
@@ -71,6 +85,8 @@ class ServerPreferences(private val context: Context) {
     }
 
     companion object {
+        const val DEFAULT_VOLUME_KEYS_THROTTLE_ENABLED = true
+
         private const val THEME_SYNC_PREFS = "bigfred_theme_sync"
         private const val THEME_SYNC_KEY = "theme_mode"
 

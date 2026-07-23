@@ -125,6 +125,9 @@
     <string name="settings_theme_system">Systemowy</string>
     <string name="settings_theme_light">Jasny</string>
     <string name="settings_theme_dark">Ciemny</string>
+    <string name="settings_controls_section">Sterowanie</string>
+    <string name="settings_volume_keys_throttle">Użyj przycisków zmiany głośności do sterowania prędkością pojazdu</string>
+    <string name="settings_volume_keys_throttle_hint">Gdy włączone, na ekranie Throttle sterują prędkością i nie zmieniają systemowej głośności. Poza Throttle zachowują się normalnie.</string>
     <string name="settings_server_section">Serwer</string>
     <string name="settings_server_hint">Adres BigFred (np. http://bigfred.local:8080 lub http://192.168.0.120:8080)</string>
     <string name="settings_server_url_label">URL serwera</string>

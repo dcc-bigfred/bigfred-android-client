@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -70,6 +71,8 @@ fun SettingsScreen(
     onSaved: (String) -> Unit,
     onSearchAgain: () -> Unit,
     onLocaleChanged: (() -> Unit)? = null,
+    volumeKeysThrottleEnabled: Boolean = true,
+    onVolumeKeysThrottleEnabledChange: (Boolean) -> Unit = {},
 ) {
     val app = LocalContext.current.applicationContext as BigFredApplication
     val prefs = app.serverPreferences
@@ -203,6 +206,36 @@ fun SettingsScreen(
                     label = stringResource(R.string.settings_theme_dark),
                     selected = themeMode == ThemeMode.DARK,
                     onSelect = { selectTheme(ThemeMode.DARK) },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_controls_section),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_volume_keys_throttle),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_volume_keys_throttle_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = volumeKeysThrottleEnabled,
+                    onCheckedChange = onVolumeKeysThrottleEnabledChange,
                 )
             }
 
