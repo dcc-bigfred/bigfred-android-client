@@ -1,5 +1,6 @@
 package com.dccbigfred.android.network
 
+import android.net.Uri
 import android.webkit.CookieManager
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.data.localvehicles.LocalVehicleEntity
@@ -59,11 +60,64 @@ class BigFredApiClient(
         }
     }
 
+    /**
+     * POST /api/v1/auth/logout (best-effort), apply any Set-Cookie from the response
+     * into the WebView jar, then expire `bigfred_session` locally.
+     * Idempotent when already logged out or offline.
+     */
+    suspend fun logout(baseUrl: String? = null) = withContext(Dispatchers.IO) {
+        val url = (baseUrl ?: serverPreferences.serverBaseUrl.first())
+            ?.trimEnd('/')
+            ?: return@withContext
+
+        val cm = CookieManager.getInstance()
+        val cookie = sessionCookie(url)
+        if (cookie != null) {
+            val req = Request.Builder()
+                .url("$url/api/v1/auth/logout")
+                .header("Cookie", cookie)
+                .post(ByteArray(0).toRequestBody(null))
+                .build()
+            try {
+                client.newCall(req).execute().use { resp ->
+                    // OkHttp does not feed CookieManager — mirror Set-Cookie into WebView.
+                    for (i in 0 until resp.headers.size) {
+                        if (resp.headers.name(i).equals("Set-Cookie", ignoreCase = true)) {
+                            cm.setCookie(url, resp.headers.value(i))
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // Still clear local cookies below.
+            }
+        }
+        clearSessionCookie(url)
+    }
+
     private fun sessionCookie(baseUrl: String): String? {
         return CookieManager.getInstance().getCookie(baseUrl)
             ?.split(";")
             ?.map { it.trim() }
             ?.firstOrNull { it.startsWith("bigfred_session=") }
+    }
+
+    private fun clearSessionCookie(baseUrl: String) {
+        val cm = CookieManager.getInstance()
+        val uri = Uri.parse(baseUrl)
+        val host = uri.host ?: return
+        val scheme = uri.scheme ?: "http"
+        val secure = scheme.equals("https", ignoreCase = true)
+        val secureAttr = if (secure) "; Secure" else ""
+        val expires = "bigfred_session=; Max-Age=0; Path=/$secureAttr"
+        val expiresWithDomain = "bigfred_session=; Max-Age=0; Path=/; Domain=$host$secureAttr"
+        // Cover the URL forms WebView commonly stores for this origin.
+        cm.setCookie(baseUrl, expires)
+        cm.setCookie("$baseUrl/", expires)
+        cm.setCookie("$scheme://$host", expires)
+        cm.setCookie("$scheme://$host/", expires)
+        cm.setCookie(baseUrl, expiresWithDomain)
+        cm.setCookie("$scheme://$host/", expiresWithDomain)
+        cm.flush()
     }
 
     private fun parseErrorCode(body: String?, httpCode: Int): String {

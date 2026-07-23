@@ -17,6 +17,7 @@ class BigFredApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         serverPreferences = ServerPreferences(this)
+        serverPreferences.applyStoredNightModeSync()
         localVehicleRepository = LocalVehicleRepository(
             LocalVehicleDatabase.get(this).localVehicleDao(),
         )

@@ -15,6 +15,10 @@
     <string name="menu_models">Baza modeli</string>
     <string name="menu_my_vehicles">Moje pojazdy na telefonie</string>
     <string name="menu_about">O aplikacji</string>
+    <string name="menu_os_management">Zarządzanie OS</string>
+    <string name="menu_monitoring">Monitoring</string>
+    <string name="menu_logout">Wyloguj z serwera</string>
+    <string name="menu_open_external_failed">Brak aplikacji do otwarcia tego linku</string>
 
     <!-- Models catalog -->
     <string name="models_title">Baza modeli</string>
@@ -97,6 +101,7 @@
 
     <!-- Discovery -->
     <string name="discovery_title">Wybierz serwer BigFred</string>
+    <string name="discovery_intro">Połącz się do lokalnego serwera domowego lub klubowego aby sterować pojazdami. W menu wysuwanym po lewej stronie ekranu są dodatkowe opcje. Bez połączenia z serwerem możesz w aplikacji zarządzać taborem, który następnie możesz łatwo skopiować na dowolny serwer, gdy telefon będzie w jego zasięgu np. na spotkaniu klubowym</string>
     <string name="discovery_scanning">Skanowanie sieci…</string>
     <string name="discovery_empty">Nie znaleziono serwera. Sprawdź Wi‑Fi lub wpisz adres ręcznie.</string>
     <string name="discovery_manual">Ręcznie</string>
@@ -116,6 +121,10 @@
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_german">Deutsch</string>
+    <string name="settings_theme_section">Motyw</string>
+    <string name="settings_theme_system">Systemowy</string>
+    <string name="settings_theme_light">Jasny</string>
+    <string name="settings_theme_dark">Ciemny</string>
     <string name="settings_controls_section">Sterowanie</string>
     <string name="settings_volume_keys_throttle">Użyj przycisków zmiany głośności do sterowania prędkością pojazdu</string>
     <string name="settings_volume_keys_throttle_hint">Gdy włączone, na ekranie Throttle sterują prędkością i nie zmieniają systemowej głośności. Poza Throttle zachowują się normalnie.</string>
@@ -138,6 +147,10 @@
     <string name="connection_chart_time">czas →</string>
     <string name="connection_wifi_lock_active">Blokada Wi‑Fi low-latency: aktywna</string>
     <string name="connection_wifi_lock_inactive">Blokada Wi‑Fi low-latency: nieaktywna</string>
+
+    <!-- WebView connection error -->
+    <string name="webview_connection_error">Nie można połączyć się z serwerem BigFred</string>
+    <string name="webview_retry">Spróbuj ponownie</string>
 
     <!-- About -->
     <string name="about_title">O aplikacji</string>

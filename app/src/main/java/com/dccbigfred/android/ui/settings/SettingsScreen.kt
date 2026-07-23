@@ -40,15 +40,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dccbigfred.android.BigFredApplication
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.network.ServerProbe
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
+import com.dccbigfred.android.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 private enum class AppLanguage(val tag: String?) {
@@ -69,6 +74,10 @@ fun SettingsScreen(
     volumeKeysThrottleEnabled: Boolean = true,
     onVolumeKeysThrottleEnabledChange: (Boolean) -> Unit = {},
 ) {
+    val app = LocalContext.current.applicationContext as BigFredApplication
+    val prefs = app.serverPreferences
+    val themeMode by prefs.themeMode.collectAsStateWithLifecycle(initialValue = ThemeMode.SYSTEM)
+
     var urlInput by remember(currentUrl) { mutableStateOf(currentUrl.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -101,9 +110,15 @@ fun SettingsScreen(
         }
     }
 
+    fun selectTheme(mode: ThemeMode) {
+        mode.applyNightMode()
+        scope.launch { prefs.setThemeMode(mode) }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -129,7 +144,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Column(modifier = Modifier.selectableGroup()) {
-                LanguageOption(
+                SettingsRadioOption(
                     label = stringResource(R.string.settings_language_system),
                     selected = selectedLanguage == AppLanguage.SYSTEM,
                     onSelect = {
@@ -138,7 +153,7 @@ fun SettingsScreen(
                         onLocaleChanged?.invoke()
                     },
                 )
-                LanguageOption(
+                SettingsRadioOption(
                     label = stringResource(R.string.settings_language_polish),
                     selected = selectedLanguage == AppLanguage.POLISH,
                     onSelect = {
@@ -147,7 +162,7 @@ fun SettingsScreen(
                         onLocaleChanged?.invoke()
                     },
                 )
-                LanguageOption(
+                SettingsRadioOption(
                     label = stringResource(R.string.settings_language_english),
                     selected = selectedLanguage == AppLanguage.ENGLISH,
                     onSelect = {
@@ -156,7 +171,7 @@ fun SettingsScreen(
                         onLocaleChanged?.invoke()
                     },
                 )
-                LanguageOption(
+                SettingsRadioOption(
                     label = stringResource(R.string.settings_language_german),
                     selected = selectedLanguage == AppLanguage.GERMAN,
                     onSelect = {
@@ -164,6 +179,33 @@ fun SettingsScreen(
                         applyAppLanguage(AppLanguage.GERMAN)
                         onLocaleChanged?.invoke()
                     },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.settings_theme_section),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.selectableGroup()) {
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_theme_system),
+                    selected = themeMode == ThemeMode.SYSTEM,
+                    onSelect = { selectTheme(ThemeMode.SYSTEM) },
+                )
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_theme_light),
+                    selected = themeMode == ThemeMode.LIGHT,
+                    onSelect = { selectTheme(ThemeMode.LIGHT) },
+                )
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_theme_dark),
+                    selected = themeMode == ThemeMode.DARK,
+                    onSelect = { selectTheme(ThemeMode.DARK) },
                 )
             }
 
@@ -266,7 +308,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun LanguageOption(
+private fun SettingsRadioOption(
     label: String,
     selected: Boolean,
     onSelect: () -> Unit,

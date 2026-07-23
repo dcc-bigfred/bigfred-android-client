@@ -73,6 +73,7 @@ import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.models.ModelSortColumn
+import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import android.app.SearchManager
 import android.content.Intent
 import kotlin.math.floor
@@ -113,6 +114,7 @@ fun ModelsCatalogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.topAppBarEdgePadding(),
                 title = {
                     Text(
                         stringResource(
@@ -647,7 +649,9 @@ private fun ModelsTable(
             if (!loading && rows.isEmpty()) {
                 Text(
                     stringResource(R.string.models_empty),
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(15.dp),
                 )
             }
         }
