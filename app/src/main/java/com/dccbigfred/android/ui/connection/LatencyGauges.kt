@@ -27,6 +27,7 @@ import com.dccbigfred.android.R
 fun LatencyGaugesRow(
     summary: LatencySummary?,
     maxMs: Long,
+    sloPalette: LatencySlo.Palette,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -37,24 +38,28 @@ fun LatencyGaugesRow(
             label = stringResource(R.string.connection_gauge_min),
             valueMs = summary?.minMs,
             maxMs = maxMs,
+            sloPalette = sloPalette,
             modifier = Modifier.weight(1f),
         )
         LatencyGauge(
             label = stringResource(R.string.connection_gauge_p50),
             valueMs = summary?.p50Ms,
             maxMs = maxMs,
+            sloPalette = sloPalette,
             modifier = Modifier.weight(1f),
         )
         LatencyGauge(
             label = stringResource(R.string.connection_gauge_p90),
             valueMs = summary?.p90Ms,
             maxMs = maxMs,
+            sloPalette = sloPalette,
             modifier = Modifier.weight(1f),
         )
         LatencyGauge(
             label = stringResource(R.string.connection_gauge_p99),
             valueMs = summary?.p99Ms,
             maxMs = maxMs,
+            sloPalette = sloPalette,
             modifier = Modifier.weight(1f),
         )
     }
@@ -65,11 +70,12 @@ fun LatencyGauge(
     label: String,
     valueMs: Long?,
     maxMs: Long,
+    sloPalette: LatencySlo.Palette,
     modifier: Modifier = Modifier,
 ) {
     val trackColor = MaterialTheme.colorScheme.outlineVariant
-    val progressColor = valueMs?.let { LatencySlo.colorFor(it) } ?: MaterialTheme.colorScheme.primary
-    val valueColor = valueMs?.let { LatencySlo.colorFor(it) }
+    val progressColor = valueMs?.let { sloPalette.colorFor(it) } ?: MaterialTheme.colorScheme.primary
+    val valueColor = valueMs?.let { sloPalette.colorFor(it) }
         ?: MaterialTheme.colorScheme.onSurfaceVariant
     val valueText = valueMs?.let { stringResource(R.string.connection_latency_ms, it.toInt()) }
         ?: stringResource(R.string.connection_gauge_empty)

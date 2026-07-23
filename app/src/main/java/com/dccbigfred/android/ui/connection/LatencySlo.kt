@@ -1,5 +1,8 @@
 package com.dccbigfred.android.ui.connection
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -21,11 +24,6 @@ object LatencySlo {
     /** Horizontal reference lines drawn on the latency chart. */
     val thresholdLinesMs: List<Long> = listOf(GOOD_MS, WARN_MS, BAD_MS)
 
-    val colorGood = Color(0xFF2E7D32)
-    val colorWarn = Color(0xFFF9A825)
-    val colorDegraded = Color(0xFFEF6C00)
-    val colorBad = Color(0xFFC62828)
-
     enum class Band {
         GOOD,
         WARN,
@@ -40,18 +38,47 @@ object LatencySlo {
         else -> Band.BAD
     }
 
-    fun colorFor(ms: Long): Color = when (band(ms)) {
-        Band.GOOD -> colorGood
-        Band.WARN -> colorWarn
-        Band.DEGRADED -> colorDegraded
-        Band.BAD -> colorBad
-    }
+    data class Palette(
+        val good: Color,
+        val warn: Color,
+        val degraded: Color,
+        val bad: Color,
+    ) {
+        fun colorFor(ms: Long): Color = when (LatencySlo.band(ms)) {
+            Band.GOOD -> good
+            Band.WARN -> warn
+            Band.DEGRADED -> degraded
+            Band.BAD -> bad
+        }
 
-    /** Color of the threshold line that marks the start of the worse band. */
-    fun colorForThreshold(thresholdMs: Long): Color = when (thresholdMs) {
-        GOOD_MS -> colorWarn
-        WARN_MS -> colorDegraded
-        BAD_MS -> colorBad
-        else -> colorWarn
+        /** Color of the threshold line that marks the start of the worse band. */
+        fun colorForThreshold(thresholdMs: Long): Color = when (thresholdMs) {
+            GOOD_MS -> warn
+            WARN_MS -> degraded
+            BAD_MS -> bad
+            else -> warn
+        }
+    }
+}
+
+@Composable
+fun rememberLatencySloPalette(): LatencySlo.Palette {
+    val dark = isSystemInDarkTheme()
+    return remember(dark) {
+        if (dark) {
+            LatencySlo.Palette(
+                good = Color(0xFF81C784),
+                warn = Color(0xFFFFD54F),
+                degraded = Color(0xFFFFB74D),
+                bad = Color(0xFFE57373),
+            )
+        } else {
+            LatencySlo.Palette(
+                good = Color(0xFF2E7D32),
+                warn = Color(0xFFF9A825),
+                degraded = Color(0xFFEF6C00),
+                bad = Color(0xFFC62828),
+            )
+        }
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -55,7 +56,7 @@ data class LatencySample(
     val atEpochMs: Long,
 )
 
-private const val MAX_SAMPLES = 30
+private const val MAX_SAMPLES = 50
 private const val PING_INTERVAL_MS = 1_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +72,13 @@ fun ConnectionStatusScreen(
     var nextNum by remember { mutableIntStateOf(1) }
     var paused by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val listAtTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 &&
+                listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+    val sloPalette = rememberLatencySloPalette()
     val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -97,8 +105,8 @@ fun ConnectionStatusScreen(
         }
     }
 
-    LaunchedEffect(samples.firstOrNull()?.num) {
-        if (samples.isNotEmpty()) {
+    LaunchedEffect(samples.firstOrNull()?.num, listAtTop) {
+        if (listAtTop && samples.isNotEmpty()) {
             listState.animateScrollToItem(0)
         }
     }
@@ -149,6 +157,7 @@ fun ConnectionStatusScreen(
                 labelColor = labelColor,
                 timeAxisLabel = chartTimeLabel,
                 yMaxMs = scaleMaxMs,
+                sloPalette = sloPalette,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp),
@@ -157,6 +166,7 @@ fun ConnectionStatusScreen(
             LatencyGaugesRow(
                 summary = summary,
                 maxMs = scaleMaxMs,
+                sloPalette = sloPalette,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -202,7 +212,7 @@ fun ConnectionStatusScreen(
                             modifier = Modifier.weight(0.65f),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.End,
-                            color = sample.latencyMs?.let { LatencySlo.colorFor(it) }
+                            color = sample.latencyMs?.let { sloPalette.colorFor(it) }
                                 ?: MaterialTheme.colorScheme.error,
                         )
                     }
@@ -253,6 +263,7 @@ private fun LatencyChart(
     labelColor: androidx.compose.ui.graphics.Color,
     timeAxisLabel: String,
     yMaxMs: Long,
+    sloPalette: LatencySlo.Palette,
     modifier: Modifier = Modifier,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -315,7 +326,7 @@ private fun LatencyChart(
             if (thresholdMs > yMaxMs) continue
             val y = topPad + plotH * (1f - (thresholdMs.toFloat() / yMax).coerceIn(0f, 1f))
             drawLine(
-                color = LatencySlo.colorForThreshold(thresholdMs),
+                color = sloPalette.colorForThreshold(thresholdMs),
                 start = Offset(leftPad, y),
                 end = Offset(leftPad + plotW, y),
                 strokeWidth = 2.dp.toPx(),
@@ -335,7 +346,7 @@ private fun LatencyChart(
             val y = topPad + plotH * (1f - (ms.toFloat() / yMax).coerceIn(0f, 1f))
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             drawCircle(
-                color = LatencySlo.colorFor(ms),
+                color = sloPalette.colorFor(ms),
                 radius = 4.dp.toPx(),
                 center = Offset(x, y),
             )
