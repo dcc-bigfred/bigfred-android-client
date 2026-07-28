@@ -76,6 +76,7 @@ import com.dccbigfred.android.data.localvehicles.LocalVehicleEntity
 import com.dccbigfred.android.models.CatalogIcon
 import com.dccbigfred.android.ui.components.MyVehiclesHelpFab
 import com.dccbigfred.android.ui.components.topAppBarEdgePadding
+import kotlinx.coroutines.delay
 
 private val RowHeight = 56.dp
 private val ThumbSize = 48.dp
@@ -94,12 +95,31 @@ fun MyVehiclesScreen(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var editing by remember { mutableStateOf<LocalVehicleEntity?>(null) }
+    var editingIsNew by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<LocalVehicleEntity?>(null) }
+    var pendingSync by remember { mutableStateOf<LocalVehicleEntity?>(null) }
+    var showOfflineHint by remember { mutableStateOf(false) }
     var menuForUuid by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.messages.collect { resId ->
             snackbar.showSnackbar(context.getString(resId))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.saveEvents.collect { event ->
+            when (event) {
+                is SaveEvent.PromptSync -> pendingSync = event.entity
+                SaveEvent.ShowOfflineCopyHint -> showOfflineHint = true
+            }
+        }
+    }
+
+    LaunchedEffect(showOfflineHint) {
+        if (showOfflineHint) {
+            delay(3_000)
+            showOfflineHint = false
         }
     }
 
@@ -127,7 +147,10 @@ fun MyVehiclesScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedButton(
-                    onClick = { editing = viewModel.newEntity() },
+                    onClick = {
+                        editing = viewModel.newEntity()
+                        editingIsNew = true
+                    },
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -161,6 +184,15 @@ fun MyVehiclesScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
+            if (showOfflineHint) {
+                InfoBanner(
+                    message = stringResource(R.string.my_vehicles_saved_offline_hint),
+                    onDismiss = { showOfflineHint = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
             if (banners.isNotEmpty()) {
                 Column(
                     modifier = Modifier
@@ -186,7 +218,10 @@ fun MyVehiclesScreen(
                 menuForUuid = menuForUuid,
                 onMenuChange = { menuForUuid = it },
                 onToggleSelected = viewModel::toggleSelected,
-                onEdit = { editing = it },
+                onEdit = {
+                    editing = it
+                    editingIsNew = false
+                },
                 onDelete = { pendingDelete = it },
                 onSync = { viewModel.sync(it) },
                 modifier = Modifier
@@ -202,8 +237,31 @@ fun MyVehiclesScreen(
             icons = viewModel.catalogIcons,
             onDismiss = { editing = null },
             onSave = {
-                viewModel.save(it)
+                viewModel.save(it, editingIsNew)
                 editing = null
+                editingIsNew = false
+            },
+        )
+    }
+
+    pendingSync?.let { entity ->
+        AlertDialog(
+            onDismissRequest = { pendingSync = null },
+            text = { Text(stringResource(R.string.my_vehicles_saved_sync_prompt)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.sync(entity)
+                        pendingSync = null
+                    },
+                ) {
+                    Text(stringResource(R.string.my_vehicles_sync_prompt_yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSync = null }) {
+                    Text(stringResource(R.string.my_vehicles_sync_prompt_later))
+                }
             },
         )
     }
@@ -230,6 +288,40 @@ fun MyVehiclesScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun InfoBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.my_vehicles_dismiss),
+                )
+            }
+        }
     }
 }
 
