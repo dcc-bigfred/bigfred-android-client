@@ -98,6 +98,14 @@
     <string name="my_vehicles_send_selected">Wyślij zaznaczone (%1$d)</string>
     <string name="my_vehicles_banner_error">%1$s: %2$s</string>
     <string name="my_vehicles_dismiss">Zamknij</string>
+    <string name="my_vehicles_help">Jak korzystać</string>
+    <string name="my_vehicles_help_title">Jak korzystać z Moje pojazdy na telefonie</string>
+    <string name="my_vehicles_help_step_prepare">Przygotuj swoje pojazdy w domu, przed imprezą, kiedykolwiek na swoim telefonie — klikając „Dodaj pojazd” na tym ekranie, lub będąc na ekranie „Baza modeli” przetrzymaj palec na modelu i wybierz „Dodaj do moich pojazdów”.</string>
+    <string name="my_vehicles_help_step_edit">Uzupełnij nazwę pojazdu, adres DCC i inne szczegóły trzymając palec na pojeździe i wybierając „Edytuj”.</string>
+    <string name="my_vehicles_help_step_login">Gdy będziesz w zasięgu huba BigFred (na przykład na imprezie lub w domu), zaloguj się do niego swoim loginem i PIN-em jaki dostałeś od organizatorów/ek lub jaki sobie sam nadałeś/aś.</string>
+    <string name="my_vehicles_help_step_send">Zaznacz pojazdy w „Moje pojazdy na telefonie” i kliknij „Wyślij zaznaczone”, aby wysłać do huba BigFred, do którego się podłączyłeś/aś.</string>
+    <string name="my_vehicles_help_step_layout">Następnie wróć do „Aplikacja BigFred”, wejdź do zakładki „Moje” → „Pojazdy” i kliknij plusik, aby dodać pojazd do makiety.</string>
+    <string name="my_vehicles_help_step_done">Gotowe! Już możesz jeździć!</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Wybierz serwer BigFred</string>

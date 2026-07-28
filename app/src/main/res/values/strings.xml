@@ -98,6 +98,14 @@
     <string name="my_vehicles_send_selected">Send selected (%1$d)</string>
     <string name="my_vehicles_banner_error">%1$s: %2$s</string>
     <string name="my_vehicles_dismiss">Dismiss</string>
+    <string name="my_vehicles_help">How to use</string>
+    <string name="my_vehicles_help_title">How to use My vehicles on phone</string>
+    <string name="my_vehicles_help_step_prepare">Prepare your vehicles at home, before an event, or whenever — tap “Add vehicle” on this screen, or on the “Model catalog” screen long-press a model and choose “Add to my vehicles”.</string>
+    <string name="my_vehicles_help_step_edit">Fill in the vehicle name, DCC address and other details by long-pressing a vehicle and choosing “Edit”.</string>
+    <string name="my_vehicles_help_step_login">When you are in range of a BigFred hub (for example at an event or at home), log in with the username and PIN you received from the organizers or set yourself.</string>
+    <string name="my_vehicles_help_step_send">Select vehicles in “My vehicles on phone” and tap “Send selected” to send them to the BigFred hub you are connected to.</string>
+    <string name="my_vehicles_help_step_layout">Then go back to “BigFred application”, open the “Mine” → “Vehicles” tab and tap the plus button to add a vehicle to the layout.</string>
+    <string name="my_vehicles_help_step_done">Done! You can start driving.</string>
 
     <!-- Discovery -->
     <string name="discovery_title">Choose BigFred server</string>
