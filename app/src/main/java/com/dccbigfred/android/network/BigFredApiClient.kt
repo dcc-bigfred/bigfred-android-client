@@ -23,6 +23,11 @@ class BigFredApiClient(
         data class Failure(val code: String) : SyncResult
     }
 
+    suspend fun isLoggedIn(): Boolean = withContext(Dispatchers.IO) {
+        val baseUrl = serverPreferences.serverBaseUrl.first() ?: return@withContext false
+        sessionCookie(baseUrl) != null
+    }
+
     suspend fun upsertVehicle(v: LocalVehicleEntity): SyncResult = withContext(Dispatchers.IO) {
         val baseUrl = serverPreferences.serverBaseUrl.first()
             ?: return@withContext SyncResult.Failure("no_server")

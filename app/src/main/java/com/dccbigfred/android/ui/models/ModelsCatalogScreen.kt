@@ -73,6 +73,7 @@ import coil.request.ImageRequest
 import com.dccbigfred.android.R
 import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.models.ModelSortColumn
+import com.dccbigfred.android.ui.components.ModelsCatalogHelpFab
 import com.dccbigfred.android.ui.components.topAppBarEdgePadding
 import android.app.SearchManager
 import android.content.Intent
@@ -147,6 +148,11 @@ fun ModelsCatalogScreen(
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            if (!pickerMode) {
+                ModelsCatalogHelpFab()
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {

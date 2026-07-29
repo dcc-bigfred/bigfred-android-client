@@ -56,6 +56,12 @@
     <string name="models_added_to_my_vehicles">Zu meinen Fahrzeugen auf dem Telefon hinzugefügt</string>
     <string name="models_search_vehicle_number">Fahrzeugnummer im Internet suchen</string>
     <string name="models_search_model">Modell im Internet suchen</string>
+    <string name="models_help">So funktioniert es</string>
+    <string name="models_help_title">So nutzen Sie den Modellkatalog</string>
+    <string name="models_help_step_find">Finden Sie ein Fahrzeug im Katalog</string>
+    <string name="models_help_step_add">Halten Sie lange und wählen Sie „Zu meinen Fahrzeugen hinzufügen“</string>
+    <string name="models_help_step_edit">Anschließend können Sie auf dem Bildschirm „Meine Fahrzeuge auf dem Telefon“ das Fahrzeug bearbeiten, benennen und die DCC-Adresse festlegen</string>
+    <string name="models_help_step_sync">Schließlich können Sie das Fahrzeug an einen Heim- oder Club-BigFred-Server senden, nachdem Sie sich angemeldet haben</string>
 
     <!-- My vehicles on phone -->
     <string name="my_vehicles_title">Meine Fahrzeuge auf dem Telefon</string>
@@ -98,6 +104,18 @@
     <string name="my_vehicles_send_selected">Ausgewählte senden (%1$d)</string>
     <string name="my_vehicles_banner_error">%1$s: %2$s</string>
     <string name="my_vehicles_dismiss">Schließen</string>
+    <string name="my_vehicles_help">So funktioniert es</string>
+    <string name="my_vehicles_help_title">So nutzen Sie Meine Fahrzeuge auf dem Telefon</string>
+    <string name="my_vehicles_help_step_prepare">Bereiten Sie Ihre Fahrzeuge zu Hause, vor einer Veranstaltung oder jederzeit auf Ihrem Telefon vor — tippen Sie auf dem Bildschirm „Meine Fahrzeuge auf dem Telefon“ auf „Fahrzeug hinzufügen“, oder halten Sie auf dem Bildschirm „Modellkatalog“ lange auf ein Modell und wählen Sie „Zu meinen Fahrzeugen hinzufügen“.</string>
+    <string name="my_vehicles_help_step_edit">Ergänzen Sie Name, DCC-Adresse und weitere Details, indem Sie lange auf ein Fahrzeug drücken und „Bearbeiten“ wählen.</string>
+    <string name="my_vehicles_help_step_login">Wenn Sie in Reichweite eines BigFred-Hubs sind (zum Beispiel auf einer Veranstaltung oder zu Hause), melden Sie sich mit dem Benutzernamen und der PIN an, die Sie von den Organisatoren erhalten oder selbst vergeben haben.</string>
+    <string name="my_vehicles_help_step_send">Markieren Sie Fahrzeuge unter „Meine Fahrzeuge auf dem Telefon“ und tippen Sie auf „Ausgewählte senden“, um sie an den verbundenen BigFred-Hub zu senden.</string>
+    <string name="my_vehicles_help_step_layout">Kehren Sie dann zur „BigFred-Anwendung“ zurück, öffnen Sie den Tab „Meine“ → „Fahrzeuge“ und tippen Sie auf das Plus, um ein Fahrzeug zur Anlage hinzuzufügen.</string>
+    <string name="my_vehicles_help_step_done">Fertig! Sie können losfahren.</string>
+    <string name="my_vehicles_saved_sync_prompt">Auf dem Telefon gespeichert! Sie sind derzeit mit BigFred verbunden. Möchten Sie das Fahrzeug an den Server senden?</string>
+    <string name="my_vehicles_sync_prompt_later">Später</string>
+    <string name="my_vehicles_sync_prompt_yes">Ja</string>
+    <string name="my_vehicles_saved_offline_hint">Wenn Sie sich mit BigFred verbinden, können Sie Ihr Fahrzeug auf den Server kopieren</string>
 
     <!-- Discovery -->
     <string name="discovery_title">BigFred-Server wählen</string>
