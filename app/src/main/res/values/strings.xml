@@ -133,14 +133,16 @@
     <string name="discovery_source_manual">manual</string>
 
     <!-- BigFred on phone -->
+    <string name="discovery_phone_section">Simplified server on phone</string>
+    <string name="discovery_on_phone_builtin">Built-in BigFred on this phone</string>
     <string name="discovery_on_phone_title">BigFred on phone</string>
     <string name="discovery_on_phone_running">BigFred on phone (running)</string>
-    <string name="discovery_on_phone_warning_title">Simplified mode</string>
-    <string name="discovery_on_phone_warning_body">Warning: BigFred running on a phone is only a SIMPLIFIED application that a second phone, ROCO WlanMaus, WiFred or LongFred cannot connect to. Do not use BigFred in simplified mode on multiple phones at the same time with the same command station. To use BigFred with multiple people/phones/controllers, run it on a Raspberry Pi 4/5+</string>
-    <string name="discovery_on_phone_confirm">Continue</string>
-    <string name="discovery_on_phone_cancel">Cancel</string>
     <string name="discovery_on_phone_starting">Starting BigFred on this phone…</string>
     <string name="discovery_on_phone_failed">Failed to start local BigFred: %1$s</string>
+    <string name="local_server_intro_title">Built-in BigFred on this phone</string>
+    <string name="local_server_intro_body">BigFred is designed as a central hub — a physical device next to the command station that phones, WlanMaus units, WiFreds and LongFreds connect to. Centralisation lets multiple users drive together and enables features such as dead-man protection and emergency braking when radio range is lost.\n\nRunning hub software as BigFred on a phone gives you a cut-down build with fewer features and safeguards. It cannot emergency-brake a train if your phone battery dies, you cannot connect a second phone, and you cannot attach a WlanMaus, WiFred or LongFred. Treat it as a demo before buying hardware to run BigFred properly.</string>
+    <string name="local_server_intro_back">Back</string>
+    <string name="local_server_intro_confirm">I understand — start anyway</string>
     <string name="menu_local_server">BigFred on phone: running</string>
     <string name="local_server_status_title">BigFred on phone</string>
     <string name="local_server_stop">Stop server</string>

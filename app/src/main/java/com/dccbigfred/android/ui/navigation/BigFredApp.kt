@@ -78,6 +78,7 @@ import com.dccbigfred.android.server.LocoServerService
 import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
+import com.dccbigfred.android.ui.localserver.LocalServerIntroScreen
 import com.dccbigfred.android.ui.localserver.LocalServerStatusScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 import com.dccbigfred.android.ui.myvehicles.MyVehiclesScreen
@@ -244,6 +245,7 @@ fun BigFredApp() {
             // Status screen shows Starting / Failed / Running while boot runs.
             navController.navigate(Routes.LOCAL_SERVER) {
                 launchSingleTop = true
+                popUpTo(Routes.LOCAL_SERVER_INTRO) { inclusive = true }
             }
             LocoServerService.start(context)
             val deadline = System.currentTimeMillis() + 60_000
@@ -377,7 +379,10 @@ fun BigFredApp() {
                             }
                         },
                     )
-                    if (selectedServerUrl != null) {
+                    if (selectedServerUrl != null &&
+                        localServerState !is LocalServerState.Running &&
+                        !LocoServerService.isLocalUrl(selectedServerUrl)
+                    ) {
                         NavigationDrawerItem(
                             label = { Text(stringResource(R.string.menu_connection_status)) },
                             selected = currentRoute == Routes.CONNECTION,
@@ -510,13 +515,23 @@ fun BigFredApp() {
                 composable(Routes.DISCOVERY) {
                     DiscoveryScreen(
                         onServerSelected = { url -> goToWebView(url) },
-                        onStartLocalServer = { startLocalServer() },
                         localServerRunning = localServerState is LocalServerState.Running,
                         onOpenLocalStatus = {
                             navController.navigate(Routes.LOCAL_SERVER) {
                                 launchSingleTop = true
                             }
                         },
+                        onOpenLocalIntro = {
+                            navController.navigate(Routes.LOCAL_SERVER_INTRO) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
+                composable(Routes.LOCAL_SERVER_INTRO) {
+                    LocalServerIntroScreen(
+                        onBack = { navController.popBackStack() },
+                        onConfirmStart = { startLocalServer() },
                     )
                 }
                 composable(Routes.LOCAL_SERVER) {

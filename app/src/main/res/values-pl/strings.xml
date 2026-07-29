@@ -133,14 +133,16 @@
     <string name="discovery_source_manual">ręczny</string>
 
     <!-- BigFred na telefonie -->
+    <string name="discovery_phone_section">Uproszczony serwer na telefonie</string>
+    <string name="discovery_on_phone_builtin">Wbudowany BigFred na tym telefonie</string>
     <string name="discovery_on_phone_title">BigFred na telefonie</string>
     <string name="discovery_on_phone_running">BigFred na telefonie (działa)</string>
-    <string name="discovery_on_phone_warning_title">Tryb uproszczony</string>
-    <string name="discovery_on_phone_warning_body">Uwaga: BigFred uruchomiony na telefonie jest jedynie UPROSZCZONĄ aplikacją, do której nie połączy się drugi telefon, ROCO WlanMaus, WiFred ani LongFred. Nie używaj BigFreda w trybie uproszczonym na wielu telefonach jednocześnie z tą samą centralką. Aby używać BigFred przez wiele osób/telefonów/pilotów uruchom go na Raspberry Pi 4/5+</string>
-    <string name="discovery_on_phone_confirm">Kontynuuj</string>
-    <string name="discovery_on_phone_cancel">Anuluj</string>
     <string name="discovery_on_phone_starting">Uruchamianie BigFred na tym telefonie…</string>
     <string name="discovery_on_phone_failed">Nie udało się uruchomić lokalnego BigFred: %1$s</string>
+    <string name="local_server_intro_title">Wbudowany BigFred na tym telefonie</string>
+    <string name="local_server_intro_body">BigFred to z założenia centralny hub, fizyczne urządzenie leżące obok centralki, do którego podłączają się telefony, wlanmausy, wifredy, longfredy. Dzięki centralizacji hub umożliwia sterowanie wielu użytkownikom oraz posiada takie funkcjonalności jak np. czuwak i awaryjne hamowanie przy utracie zasięgu.\n\nUruchamiając oprogramowanie huba — BigFred na telefonie — otrzymasz okrojoną z funkcji i zabezpieczeń wersję. Nie będzie ona w stanie awaryjnie zahamować składu, gdy rozładuje Ci się telefon, nie podłączysz do niej drugiego telefonu, nie podłączysz Wlanmausa, WiFreda ani LongFreda. Potraktuj to jako wersję pokazową przed zakupem urządzenia do uruchomienia BigFreda.</string>
+    <string name="local_server_intro_back">Cofnij</string>
+    <string name="local_server_intro_confirm">Rozumiem, uruchom pomimo tego</string>
     <string name="menu_local_server">BigFred na telefonie: działa</string>
     <string name="local_server_status_title">BigFred na telefonie</string>
     <string name="local_server_stop">Zatrzymaj serwer</string>
