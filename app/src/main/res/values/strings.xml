@@ -154,7 +154,7 @@
     <string name="local_server_notification_channel">Local BigFred server</string>
     <string name="local_server_notification_title">BigFred on phone</string>
     <string name="local_server_notification_text">Simplified command station is running</string>
-    <string name="local_server_missing_binaries">Native binaries missing. Fetch Valkey/supervisord releases (make native-prebuilt) and provide loco-server-android-arm64 (make android in ../bigfred or set bigfredNativeTag).</string>
+    <string name="local_server_missing_binaries">Native binaries missing. Run make native-prebuilt (GHCR loco-server + Valkey/supervisord releases) or build loco locally in ../bigfred.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

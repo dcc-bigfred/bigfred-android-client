@@ -38,9 +38,6 @@ app/src/main/assets/models/
 tools/hydrus-import/out/
 tools/hydrus-import/__pycache__/
 
-# Native prebuilts (fetched from deps-android-* GitHub Releases) and staged jniLibs
+# Native prebuilts (GHCR + deps-android-* GitHub Releases) and staged jniLibs
 native-prebuilt/
 app/src/main/jniLibs/
-
-# CI / local checkout of dcc-bigfred/bigfred for loco-server-android-arm64
-.deps/

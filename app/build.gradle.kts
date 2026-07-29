@@ -6,8 +6,6 @@ plugins {
 }
 
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URI
 
 fun gitCommand(vararg args: String): String {
     return try {
@@ -115,6 +113,7 @@ val fetchNativeBinaries by tasks.registering {
     val localLoco = rootProject.layout.projectDirectory.dir("../bigfred/bin")
         .file("loco-server-android-arm64")
     val fetchScript = rootProject.layout.projectDirectory.file("scripts/fetch-github-release-asset.sh")
+    val ghcrScript = rootProject.layout.projectDirectory.file("scripts/fetch-ghcr-oras.sh")
     outputs.dir(jniOut)
     doLast {
         val outDir = jniOut.asFile
@@ -132,10 +131,9 @@ val fetchNativeBinaries by tasks.registering {
             return true
         }
 
-        fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {
-            val script = fetchScript.asFile
-            require(script.isFile) { "Missing fetch script: ${script.absolutePath}" }
-            val pb = ProcessBuilder(script.absolutePath, repo, assetName, dest.absolutePath)
+        fun runScript(script: File, vararg args: String) {
+            require(script.isFile) { "Missing script: ${script.absolutePath}" }
+            val pb = ProcessBuilder(listOf(script.absolutePath, *args))
             pb.directory(rootProject.projectDir)
             pb.redirectErrorStream(true)
             val env = pb.environment()
@@ -145,8 +143,24 @@ val fetchNativeBinaries by tasks.registering {
             val code = proc.waitFor()
             print(output)
             if (code != 0) {
-                throw GradleException("Failed to fetch $assetName from $repo (exit $code)")
+                throw GradleException("Script ${script.name} failed (exit $code)")
             }
+        }
+
+        fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {
+            runScript(fetchScript.asFile, repo, assetName, dest.absolutePath)
+        }
+
+        fun fetchLocoFromGhcr(dest: File) {
+            val image = (project.findProperty("bigfredOciImage") as String?)
+                ?.ifBlank { null }
+                ?: System.getenv("BIGFRED_OCI_IMAGE")
+                ?: "ghcr.io/dcc-bigfred/loco-server-android-arm64"
+            val tag = (project.findProperty("bigfredOciTag") as String?)
+                ?.ifBlank { null }
+                ?: System.getenv("BIGFRED_OCI_TAG")
+                ?: "main"
+            runScript(ghcrScript.asFile, image, tag, dest.absolutePath, "main")
         }
 
         fun stageOrFetch(prebuiltName: String, repoProp: String, defaultRepo: String) {
@@ -179,7 +193,7 @@ val fetchNativeBinaries by tasks.registering {
             "dcc-bigfred/deps-android-supervisord",
         )
 
-        // loco-server: local ../bigfred/bin → native-prebuilt → GitHub release asset.
+        // loco-server: local ../bigfred/bin → native-prebuilt → GHCR (ORAS).
         val locoDest = File(outDir, "libloco-server.so")
         val locoCached = prebuilt.file("libloco-server.so").asFile
         when {
@@ -192,32 +206,7 @@ val fetchNativeBinaries by tasks.registering {
                 println("Staged libloco-server.so from ${locoCached.absolutePath}")
             }
             else -> {
-                val repo = (project.findProperty("bigfredNativeRepo") as String?)
-                    ?.ifBlank { null }
-                    ?: System.getenv("BIGFRED_NATIVE_REPO")
-                    ?: "dcc-bigfred/bigfred"
-                val tag = (project.findProperty("bigfredNativeTag") as String?)
-                    ?.ifBlank { null }
-                    ?: System.getenv("BIGFRED_NATIVE_TAG")
-                if (!tag.isNullOrBlank()) {
-                    val token = githubToken()
-                    val url =
-                        "https://github.com/$repo/releases/download/$tag/loco-server-android-arm64"
-                    val tmp = File(outDir, ".loco-server.download")
-                    val conn = URI(url).toURL().openConnection() as HttpURLConnection
-                    if (!token.isNullOrBlank()) {
-                        conn.setRequestProperty("Authorization", "Bearer $token")
-                        conn.setRequestProperty("Accept", "application/octet-stream")
-                    }
-                    conn.inputStream.use { input ->
-                        tmp.outputStream().use { output -> input.copyTo(output) }
-                    }
-                    tmp.renameTo(locoDest)
-                    println("Downloaded libloco-server.so from $url")
-                } else {
-                    // Latest release asset (name differs from jni lib name).
-                    fetchLatestReleaseAsset(repo, "loco-server-android-arm64", locoDest)
-                }
+                fetchLocoFromGhcr(locoDest)
                 locoDest.parentFile.mkdirs()
                 locoCached.parentFile.mkdirs()
                 locoDest.copyTo(locoCached, overwrite = true)
@@ -227,7 +216,7 @@ val fetchNativeBinaries by tasks.registering {
             throw GradleException(
                 "libloco-server.so missing after fetch. " +
                     "Build with 'make -C ../bigfred android', place it in native-prebuilt/arm64-v8a/, " +
-                    "or publish loco-server-android-arm64 on dcc-bigfred/bigfred releases.",
+                    "or pull from ghcr.io/dcc-bigfred/loco-server-android-arm64 (ORAS).",
             )
         }
     }
