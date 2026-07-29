@@ -86,16 +86,8 @@ jobs:
           BIGFRED_OCI_TAG: ${{ vars.BIGFRED_OCI_TAG }}
         run: |
           set -euo pipefail
-          if [ -n "${BIGFRED_OCI_TAG:-}" ]; then
-            TAG="${BIGFRED_OCI_TAG}"
-          elif [ -n "${GITHUB_HEAD_REF:-}" ]; then
-            TAG="branch-$(echo "${GITHUB_HEAD_REF}" | tr '/_' '-' | tr '[:upper:]' '[:lower:]')"
-          elif [ "${GITHUB_REF_NAME}" = "master" ] || [ "${GITHUB_REF_NAME}" = "main" ]; then
-            TAG="main"
-          else
-            TAG="branch-$(echo "${GITHUB_REF_NAME}" | tr '/_' '-' | tr '[:upper:]' '[:lower:]')"
-          fi
-          echo "Using loco-server OCI tag: ${TAG} (fallback: main)"
+          TAG="${BIGFRED_OCI_TAG:-main}"
+          echo "Using loco-server OCI tag: ${TAG}"
           make native-prebuilt BIGFRED_OCI_TAG="${TAG}"
           ls -lh native-prebuilt/arm64-v8a/
 
