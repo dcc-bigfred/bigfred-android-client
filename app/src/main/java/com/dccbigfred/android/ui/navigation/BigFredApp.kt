@@ -225,11 +225,27 @@ fun BigFredApp() {
     val localServerState by LocoServerService.state.collectAsStateWithLifecycle()
     var localStartError by remember { mutableStateOf<String?>(null) }
 
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { /* proceed regardless — FGS may still start with silent notifications denied */ }
+
     fun startLocalServer() {
         scope.launch {
             localStartError = null
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS,
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (!granted) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            // Status screen shows Starting / Failed / Running while boot runs.
+            navController.navigate(Routes.LOCAL_SERVER) {
+                launchSingleTop = true
+            }
             LocoServerService.start(context)
-            // Wait until running or failed (bounded).
             val deadline = System.currentTimeMillis() + 60_000
             while (System.currentTimeMillis() < deadline) {
                 when (val s = LocoServerService.state.value) {

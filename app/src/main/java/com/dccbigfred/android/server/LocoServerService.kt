@@ -49,15 +49,25 @@ class LocoServerService : Service() {
             }
             ACTION_START, null -> {
                 if (!running.get()) {
-                    startForegroundNotification()
+                    _state.value = LocalServerState.Starting
+                    try {
+                        startForegroundNotification()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "startForeground failed", e)
+                        _state.value = LocalServerState.Failed(e.message ?: e.toString())
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
                     acquireWakeLock()
                     thread(name = "loco-server-boot", isDaemon = true) {
                         try {
                             boot()
                         } catch (e: Exception) {
                             Log.e(TAG, "local server start failed", e)
+                            cleanupChildren()
+                            releaseWakeLock()
+                            // Must set Failed after cleanup — stopLocalServer() would clear it to Stopped.
                             _state.value = LocalServerState.Failed(e.message ?: e.toString())
-                            stopLocalServer()
                             stopSelf()
                         }
                     }
@@ -68,8 +78,15 @@ class LocoServerService : Service() {
     }
 
     override fun onDestroy() {
-        stopLocalServer()
+        cleanupChildren()
         releaseWakeLock()
+        // Keep Failed visible so the UI can show the error after the service exits.
+        if (_state.value !is LocalServerState.Failed) {
+            _state.value = LocalServerState.Stopped
+        }
+        running.set(false)
+        watchdogThread?.interrupt()
+        watchdogThread = null
         super.onDestroy()
     }
 
@@ -191,7 +208,7 @@ class LocoServerService : Service() {
                     val valkeyOk = supervised || valkeyProcess?.isAlive == true
                     if (!locoAlive || !valkeyOk) {
                         Log.w(TAG, "child died loco=$locoAlive valkeyOk=$valkeyOk — restarting")
-                        stopChildren()
+                        cleanupChildren()
                         running.set(false)
                         boot()
                         return@thread
@@ -213,7 +230,7 @@ class LocoServerService : Service() {
         running.set(false)
         watchdogThread?.interrupt()
         watchdogThread = null
-        stopChildren()
+        cleanupChildren()
         val paths = LocalServerPaths.from(this)
         paths.locoServerPid.delete()
         paths.valkeyPid.delete()
@@ -221,7 +238,7 @@ class LocoServerService : Service() {
         _state.value = LocalServerState.Stopped
     }
 
-    private fun stopChildren() {
+    private fun cleanupChildren() {
         listOf(locoProcess, valkeyProcess).forEach { proc ->
             proc ?: return@forEach
             try {
@@ -234,6 +251,13 @@ class LocoServerService : Service() {
         }
         locoProcess = null
         valkeyProcess = null
+        try {
+            val paths = LocalServerPaths.from(this)
+            paths.locoServerPid.delete()
+            paths.valkeyPid.delete()
+            paths.supervisordPid.delete()
+        } catch (_: Exception) {
+        }
     }
 
     /** Copy supervisord/ctl into codeCacheDir/bin so LookPath finds bare names. */
@@ -337,8 +361,18 @@ class LocoServerService : Service() {
         val state: StateFlow<LocalServerState> = _state.asStateFlow()
 
         fun start(context: Context) {
+            if (_state.value !is LocalServerState.Running &&
+                _state.value !is LocalServerState.Starting
+            ) {
+                _state.value = LocalServerState.Starting
+            }
             val intent = Intent(context, LocoServerService::class.java).setAction(ACTION_START)
-            context.startForegroundService(intent)
+            try {
+                context.startForegroundService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "startForegroundService failed", e)
+                _state.value = LocalServerState.Failed(e.message ?: e.toString())
+            }
         }
 
         fun stop(context: Context) {
