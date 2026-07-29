@@ -139,6 +139,7 @@
     <string name="discovery_on_phone_running">BigFred na telefonie (działa)</string>
     <string name="discovery_on_phone_starting">Uruchamianie BigFred na tym telefonie…</string>
     <string name="discovery_on_phone_failed">Nie udało się uruchomić lokalnego BigFred: %1$s</string>
+    <string name="discovery_on_phone_cancel">OK</string>
     <string name="local_server_intro_title">Wbudowany BigFred na tym telefonie</string>
     <string name="local_server_intro_diagram_cd">Typowa sieć huba BigFred: centralka, router i BigFred</string>
     <string name="local_server_intro_body">BigFred to z założenia centralny hub, fizyczne urządzenie leżące obok centralki, do którego podłączają się telefony, wlanmausy, wifredy, longfredy. Dzięki centralizacji hub umożliwia sterowanie wielu użytkownikom oraz posiada takie funkcjonalności jak np. czuwak i awaryjne hamowanie przy utracie zasięgu.\n\nUruchamiając oprogramowanie huba — BigFred na telefonie — otrzymasz okrojoną z funkcji i zabezpieczeń wersję. Nie będzie ona w stanie awaryjnie zahamować składu, gdy rozładuje Ci się telefon, nie podłączysz do niej drugiego telefonu, nie podłączysz Wlanmausa, WiFreda ani LongFreda. Potraktuj to jako wersję pokazową przed zakupem urządzenia do uruchomienia BigFreda.</string>
@@ -156,7 +157,7 @@
     <string name="local_server_status_failed">Błąd: %1$s</string>
     <string name="local_server_notification_channel">Lokalny serwer BigFred</string>
     <string name="local_server_notification_title">BigFred na telefonie</string>
-    <string name="local_server_notification_text">Uproszczona centralka jest uruchomiona</string>
+    <string name="local_server_notification_text">Kliknij aby przejść do BigFred</string>
     <string name="local_server_missing_binaries">Brak binarek natywnych. Uruchom make native-prebuilt (loco-server z GHCR + release Valkey/supervisord) lub zbuduj loco lokalnie w ../bigfred.</string>
 
     <!-- Settings -->

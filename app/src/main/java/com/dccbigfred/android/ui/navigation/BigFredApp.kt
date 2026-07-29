@@ -89,6 +89,8 @@ import com.dccbigfred.android.ui.webview.applyLocaleToWebView
 import com.dccbigfred.android.ui.webview.deliverThrottleHardwareKeys
 import com.dccbigfred.android.ui.webview.handleVolumeKeyEvent
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 /** Hit target / drag strip at the physical left edge. */
@@ -99,7 +101,9 @@ private val DrawerHandleHeight = 56.dp
 private const val DrawerOpenDragThresholdPx = 40f
 
 @Composable
-fun BigFredApp() {
+fun BigFredApp(
+    openLocalWebViewRequests: Flow<Unit> = emptyFlow(),
+) {
     val context = LocalContext.current
     val app = context.applicationContext as BigFredApplication
     val prefs = app.serverPreferences
@@ -181,6 +185,16 @@ fun BigFredApp() {
                 launchSingleTop = true
             }
             drawerState.close()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        openLocalWebViewRequests.collect {
+            val url = when (val s = LocoServerService.state.value) {
+                is LocalServerState.Running -> s.baseUrl
+                else -> LocoServerService.LOCAL_BASE_URL
+            }
+            goToWebView(url)
         }
     }
 

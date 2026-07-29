@@ -139,6 +139,7 @@
     <string name="discovery_on_phone_running">BigFred on phone (running)</string>
     <string name="discovery_on_phone_starting">Starting BigFred on this phone…</string>
     <string name="discovery_on_phone_failed">Failed to start local BigFred: %1$s</string>
+    <string name="discovery_on_phone_cancel">OK</string>
     <string name="local_server_intro_title">Built-in BigFred on this phone</string>
     <string name="local_server_intro_diagram_cd">Typical BigFred hub network: command station, router and BigFred</string>
     <string name="local_server_intro_body">BigFred is designed as a central hub — a physical device next to the command station that phones, WlanMaus units, WiFreds and LongFreds connect to. Centralisation lets multiple users drive together and enables features such as dead-man protection and emergency braking when radio range is lost.\n\nRunning hub software as BigFred on a phone gives you a cut-down build with fewer features and safeguards. It cannot emergency-brake a train if your phone battery dies, you cannot connect a second phone, and you cannot attach a WlanMaus, WiFred or LongFred. Treat it as a demo before buying hardware to run BigFred properly.</string>
@@ -156,7 +157,7 @@
     <string name="local_server_status_failed">Failed: %1$s</string>
     <string name="local_server_notification_channel">Local BigFred server</string>
     <string name="local_server_notification_title">BigFred on phone</string>
-    <string name="local_server_notification_text">Simplified command station is running</string>
+    <string name="local_server_notification_text">Tap to open BigFred</string>
     <string name="local_server_missing_binaries">Native binaries missing. Run make native-prebuilt (GHCR loco-server + Valkey/supervisord releases) or build loco locally in ../bigfred.</string>
 
     <!-- Settings -->

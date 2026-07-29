@@ -1,5 +1,7 @@
 package com.dccbigfred.android.ui.localserver
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,9 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -24,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +55,7 @@ fun LocalServerStatusScreen(
 ) {
     val context = LocalContext.current
     val state by LocoServerService.state.collectAsStateWithLifecycle()
+    var logsExpanded by remember { mutableStateOf(false) }
     var logTick by remember { mutableIntStateOf(0) }
     LaunchedEffect(state) {
         if (state is LocalServerState.Starting) {
@@ -144,15 +152,34 @@ fun LocalServerStatusScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.local_server_logs),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = logs.ifBlank { "—" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { logsExpanded = !logsExpanded }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.local_server_logs),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    imageVector = if (logsExpanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
+                    contentDescription = null,
+                )
+            }
+            AnimatedVisibility(visible = logsExpanded) {
+                Text(
+                    text = logs.ifBlank { "—" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

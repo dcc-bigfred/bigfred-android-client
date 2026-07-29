@@ -286,10 +286,14 @@ class LocoServerService : Service() {
 
     private fun startForegroundNotification() {
         ensureChannel()
+        val openActivityIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_LOCAL_WEBVIEW, true)
+        }
         val openIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
+            openActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stopIntent = PendingIntent.getService(
@@ -354,6 +358,7 @@ class LocoServerService : Service() {
         const val HTTP_PORT = 8080
         const val REDIS_PORT = 6379
         const val LOCAL_BASE_URL = "http://127.0.0.1:$HTTP_PORT"
+        const val EXTRA_OPEN_LOCAL_WEBVIEW = "com.dccbigfred.android.OPEN_LOCAL_WEBVIEW"
         const val ACTION_START = "com.dccbigfred.android.server.START"
         const val ACTION_STOP = "com.dccbigfred.android.server.STOP"
 
