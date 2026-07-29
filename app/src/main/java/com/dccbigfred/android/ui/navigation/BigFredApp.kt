@@ -71,6 +71,7 @@ import com.dccbigfred.android.MainActivity
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
+import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.network.CompanionServiceProbe
 import com.dccbigfred.android.network.CompanionServices
 import com.dccbigfred.android.server.LocalServerState
@@ -190,11 +191,16 @@ fun BigFredApp(
 
     LaunchedEffect(Unit) {
         openLocalWebViewRequests.collect {
-            val url = when (val s = LocoServerService.state.value) {
-                is LocalServerState.Running -> s.baseUrl
-                else -> LocoServerService.LOCAL_BASE_URL
+            when (val s = LocoServerService.state.value) {
+                is LocalServerState.Running -> goToWebView(s.baseUrl)
+                else -> {
+                    // Server not ready yet — show the status screen instead of
+                    // opening an unreachable WebView at 127.0.0.1:8080.
+                    navController.navigate(Routes.LOCAL_SERVER) {
+                        launchSingleTop = true
+                    }
+                }
             }
-            goToWebView(url)
         }
     }
 
@@ -608,6 +614,15 @@ fun BigFredApp(
                 composable(Routes.MODELS) {
                     ModelsCatalogScreen(
                         onBack = { navController.popBackStack() },
+                        onAddToMyVehicles = { row ->
+                            val entity = MyVehiclesViewModel.fromModelRow(
+                                row,
+                                uuid = java.util.UUID.randomUUID().toString(),
+                            )
+                            scope.launch {
+                                app.localVehicleRepository.upsert(entity)
+                            }
+                        },
                     )
                 }
                 composable(Routes.MY_VEHICLES) {

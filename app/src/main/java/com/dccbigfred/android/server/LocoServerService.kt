@@ -36,6 +36,10 @@ class LocoServerService : Service() {
     private var valkeyProcess: Process? = null
     private var locoProcess: Process? = null
     private var watchdogThread: Thread? = null
+    private var bootThread: Thread? = null
+    /** True while a boot is in progress; gates concurrent ACTION_START deliveries. */
+    private val booting = AtomicBoolean(false)
+    /** True once boot() reached Running; cleared on stop or boot failure. */
     private val running = AtomicBoolean(false)
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -48,27 +52,32 @@ class LocoServerService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
-                if (!running.get()) {
+                if (booting.compareAndSet(false, true)) {
                     _state.value = LocalServerState.Starting
                     try {
                         startForegroundNotification()
                     } catch (e: Exception) {
                         Log.e(TAG, "startForeground failed", e)
+                        booting.set(false)
                         _state.value = LocalServerState.Failed(e.message ?: e.toString())
                         stopSelf()
                         return START_NOT_STICKY
                     }
                     acquireWakeLock()
-                    thread(name = "loco-server-boot", isDaemon = true) {
+                    bootThread = thread(name = "loco-server-boot", isDaemon = true) {
                         try {
                             boot()
+                        } catch (e: InterruptedException) {
+                            // stop requested during boot — cleanup already done by stopLocalServer
+                            Log.i(TAG, "boot interrupted, stopping")
                         } catch (e: Exception) {
                             Log.e(TAG, "local server start failed", e)
                             cleanupChildren()
                             releaseWakeLock()
-                            // Must set Failed after cleanup — stopLocalServer() would clear it to Stopped.
                             _state.value = LocalServerState.Failed(e.message ?: e.toString())
                             stopSelf()
+                        } finally {
+                            booting.set(false)
                         }
                     }
                 }
@@ -85,6 +94,9 @@ class LocoServerService : Service() {
             _state.value = LocalServerState.Stopped
         }
         running.set(false)
+        booting.set(false)
+        bootThread?.interrupt()
+        bootThread = null
         watchdogThread?.interrupt()
         watchdogThread = null
         super.onDestroy()
@@ -164,6 +176,12 @@ class LocoServerService : Service() {
         ProcessOrphanReaper.writePid(paths.locoServerPid, processPid(locoProcess!!))
 
         waitForHttpReady(45_000)
+        // stop may have been requested while we were waiting for HTTP — bail
+        // before flipping to Running / starting the watchdog, otherwise an
+        // interrupted boot would resurrect the service after stop.
+        if (Thread.currentThread().isInterrupted || !booting.get()) {
+            throw InterruptedException("stopped during boot")
+        }
         running.set(true)
         _state.value = LocalServerState.Running(LOCAL_BASE_URL)
         startWatchdog(supervised)
@@ -219,7 +237,15 @@ class LocoServerService : Service() {
                         Log.w(TAG, "child died loco=$locoAlive valkeyOk=$valkeyOk — restarting")
                         cleanupChildren()
                         running.set(false)
-                        boot()
+                        if (!booting.compareAndSet(false, true)) {
+                            Log.w(TAG, "restart skipped — boot already in progress")
+                            return@thread
+                        }
+                        try {
+                            boot()
+                        } finally {
+                            booting.set(false)
+                        }
                         return@thread
                     }
                 } catch (_: InterruptedException) {
@@ -228,6 +254,7 @@ class LocoServerService : Service() {
                     Log.e(TAG, "watchdog restart failed", e)
                     _state.value = LocalServerState.Failed(e.message ?: e.toString())
                     running.set(false)
+                    booting.set(false)
                     stopSelf()
                     return@thread
                 }
@@ -237,6 +264,9 @@ class LocoServerService : Service() {
 
     private fun stopLocalServer() {
         running.set(false)
+        booting.set(false)
+        bootThread?.interrupt()
+        bootThread = null
         watchdogThread?.interrupt()
         watchdogThread = null
         cleanupChildren()
