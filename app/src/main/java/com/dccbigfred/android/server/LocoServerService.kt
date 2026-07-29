@@ -119,6 +119,10 @@ class LocoServerService : Service() {
         val env = HashMap(System.getenv())
         env["BIGFRED_DATA_DIR"] = paths.dataDir.absolutePath
         env["BIGFRED_JWT_SECRET"] = jwt
+        LanPrefix.resolve()?.let { prefix ->
+            env["BIGFRED_LAN_PREFIX"] = prefix
+            Log.i(TAG, "BIGFRED_LAN_PREFIX=$prefix (for dcc-bus scan --lan-prefix)")
+        }
         if (supervised) {
             // Shim resolves sibling libsupervisord.so; also set env for clarity.
             env["SUPERVISORD_BIN"] = supervisordBin.absolutePath
