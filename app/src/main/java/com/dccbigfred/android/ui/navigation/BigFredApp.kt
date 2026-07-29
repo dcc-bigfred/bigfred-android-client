@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +40,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -71,9 +73,12 @@ import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
 import com.dccbigfred.android.network.CompanionServiceProbe
 import com.dccbigfred.android.network.CompanionServices
+import com.dccbigfred.android.server.LocalServerState
+import com.dccbigfred.android.server.LocoServerService
 import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
+import com.dccbigfred.android.ui.localserver.LocalServerStatusScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 import com.dccbigfred.android.ui.myvehicles.MyVehiclesScreen
 import com.dccbigfred.android.ui.myvehicles.MyVehiclesViewModel
@@ -217,11 +222,52 @@ fun BigFredApp() {
         }
     }
 
+    val localServerState by LocoServerService.state.collectAsStateWithLifecycle()
+    var localStartError by remember { mutableStateOf<String?>(null) }
+
+    fun startLocalServer() {
+        scope.launch {
+            localStartError = null
+            LocoServerService.start(context)
+            // Wait until running or failed (bounded).
+            val deadline = System.currentTimeMillis() + 60_000
+            while (System.currentTimeMillis() < deadline) {
+                when (val s = LocoServerService.state.value) {
+                    is LocalServerState.Running -> {
+                        goToWebView(s.baseUrl)
+                        return@launch
+                    }
+                    is LocalServerState.Failed -> {
+                        localStartError = s.message
+                        return@launch
+                    }
+                    else -> kotlinx.coroutines.delay(300)
+                }
+            }
+            localStartError = "timeout"
+        }
+    }
+
+    fun stopLocalServerAndDiscover() {
+        scope.launch {
+            LocoServerService.stop(context)
+            prefs.clearServerBaseUrl()
+            activeUrl = null
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+            drawerState.close()
+        }
+    }
+
     fun logoutFromServer() {
         scope.launch {
             drawerState.close()
             val url = selectedServerUrl
-            if (url != null) {
+            if (LocoServerService.isLocalUrl(url)) {
+                LocoServerService.stop(context)
+            } else if (url != null) {
                 app.bigFredApiClient.logout(url)
             }
             prefs.clearServerBaseUrl()
@@ -259,6 +305,23 @@ fun BigFredApp() {
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         onClick = { openBigFredApp() },
                     )
+                    if (localServerState is LocalServerState.Running ||
+                        LocoServerService.isLocalUrl(selectedServerUrl)
+                    ) {
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_local_server)) },
+                            selected = currentRoute == Routes.LOCAL_SERVER,
+                            icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    navController.navigate(Routes.LOCAL_SERVER) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            },
+                        )
+                    }
                     NavigationDrawerItem(
                         label = { Text(stringResource(R.string.menu_settings)) },
                         selected = currentRoute == Routes.SETTINGS,
@@ -429,7 +492,22 @@ fun BigFredApp() {
                     }
                 }
                 composable(Routes.DISCOVERY) {
-                    DiscoveryScreen(onServerSelected = { url -> goToWebView(url) })
+                    DiscoveryScreen(
+                        onServerSelected = { url -> goToWebView(url) },
+                        onStartLocalServer = { startLocalServer() },
+                        localServerRunning = localServerState is LocalServerState.Running,
+                        onOpenLocalStatus = {
+                            navController.navigate(Routes.LOCAL_SERVER) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
+                composable(Routes.LOCAL_SERVER) {
+                    LocalServerStatusScreen(
+                        onOpenApp = { openBigFredApp() },
+                        onStopped = { stopLocalServerAndDiscover() },
+                    )
                 }
                 composable(Routes.WEBVIEW) {
                     if (webSessionUrl == null) {
@@ -485,14 +563,6 @@ fun BigFredApp() {
                 composable(Routes.MODELS) {
                     ModelsCatalogScreen(
                         onBack = { navController.popBackStack() },
-                        onAddToMyVehicles = { row ->
-                            scope.launch {
-                                val repo = app.localVehicleRepository
-                                repo.upsert(
-                                    MyVehiclesViewModel.fromModelRow(row, repo.newUuid()),
-                                )
-                            }
-                        },
                     )
                 }
                 composable(Routes.MY_VEHICLES) {
@@ -520,6 +590,21 @@ fun BigFredApp() {
                 )
             }
         }
+    }
+
+    if (localStartError != null) {
+        AlertDialog(
+            onDismissRequest = { localStartError = null },
+            title = { Text(stringResource(R.string.discovery_on_phone_title)) },
+            text = {
+                Text(stringResource(R.string.discovery_on_phone_failed, localStartError!!))
+            },
+            confirmButton = {
+                TextButton(onClick = { localStartError = null }) {
+                    Text(stringResource(R.string.discovery_on_phone_cancel))
+                }
+            },
+        )
     }
 }
 

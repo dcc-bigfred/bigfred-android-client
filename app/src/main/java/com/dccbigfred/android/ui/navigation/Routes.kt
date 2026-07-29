@@ -9,4 +9,5 @@ object Routes {
     const val MODELS = "models"
     const val MY_VEHICLES = "my_vehicles"
     const val ABOUT = "about"
+    const val LOCAL_SERVER = "local_server"
 }

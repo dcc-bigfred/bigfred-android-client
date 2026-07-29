@@ -22,6 +22,7 @@ class ServerPreferences(private val context: Context) {
     private val volumeKeysThrottleEnabledKey =
         booleanPreferencesKey("volume_keys_throttle_enabled")
     private val themeModeKey = stringPreferencesKey("theme_mode")
+    private val localJwtSecretKey = stringPreferencesKey("local_jwt_secret")
 
     private val themeSyncPrefs =
         context.getSharedPreferences(THEME_SYNC_PREFS, Context.MODE_PRIVATE)
@@ -75,6 +76,21 @@ class ServerPreferences(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs.remove(serverBaseUrlKey)
         }
+    }
+
+    /**
+     * Stable JWT secret for the on-phone loco-server so sessions survive
+     * process restarts within the same install.
+     */
+    suspend fun getOrCreateLocalJwtSecret(): String {
+        val existing = context.dataStore.data.map { it[localJwtSecretKey] }.first()
+        if (!existing.isNullOrBlank()) return existing
+        val generated = java.util.UUID.randomUUID().toString().replace("-", "") +
+            java.util.UUID.randomUUID().toString().replace("-", "")
+        context.dataStore.edit { prefs ->
+            prefs[localJwtSecretKey] = generated
+        }
+        return generated
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
