@@ -76,6 +76,45 @@ jobs:
           echo "$BIGFRED_STORE_FILE_CONTENT" | base64 -d > "${RUNNER_TEMP}/bigfred-release.jks"
           echo "BIGFRED_STORE_FILE=${RUNNER_TEMP}/bigfred-release.jks" >> "$GITHUB_ENV"
 
+      - name: Set up Go (loco-server-android-arm64)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+          cache: false
+
+      - name: Set up Node (loco-server SPA embed)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Checkout bigfred for loco-server-android-arm64
+        uses: actions/checkout@v4
+        with:
+          repository: dcc-bigfred/bigfred
+          # Prefer repo variable BIGFRED_REF; default to phone branch until merged to master.
+          ref: ${{ vars.BIGFRED_REF || 'feat/bigfred-on-phone' }}
+          path: .deps/bigfred
+
+      - name: Build loco-server-android-arm64
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          make -C .deps/bigfred android
+          mkdir -p native-prebuilt/arm64-v8a
+          cp -f .deps/bigfred/bin/loco-server-android-arm64 \
+            native-prebuilt/arm64-v8a/libloco-server.so
+          chmod 755 native-prebuilt/arm64-v8a/libloco-server.so
+          ls -lh native-prebuilt/arm64-v8a/libloco-server.so
+
+      - name: Fetch Valkey / supervisord prebuilts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          make valkey-android supervisord-android
+          ls -lh native-prebuilt/arm64-v8a/
+
       - name: Unit tests
         env:
           GRADLE_FLAGS: ""
@@ -87,7 +126,16 @@ jobs:
           BIGFRED_STORE_PASSWORD: ${{ secrets.BIGFRED_STORE_PASSWORD }}
           BIGFRED_KEY_ALIAS: ${{ secrets.BIGFRED_KEY_ALIAS }}
           BIGFRED_KEY_PASSWORD: ${{ secrets.BIGFRED_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: make apk
+
+      - name: Verify APK contains loco-server
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libloco-server\.so' 
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libvalkey-server\.so'
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libsupervisord\.so'
 
       - name: Stage APK artifact
         run: |

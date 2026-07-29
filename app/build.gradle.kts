@@ -179,38 +179,56 @@ val fetchNativeBinaries by tasks.registering {
             "dcc-bigfred/deps-android-supervisord",
         )
 
+        // loco-server: local ../bigfred/bin → native-prebuilt → GitHub release asset.
         val locoDest = File(outDir, "libloco-server.so")
-        if (localLoco.asFile.isFile) {
-            localLoco.asFile.copyTo(locoDest, overwrite = true)
-            println("Staged libloco-server.so from local ${localLoco.asFile}")
-        } else {
-            val repo = (project.findProperty("bigfredNativeRepo") as String?)
-                ?.ifBlank { null }
-                ?: System.getenv("BIGFRED_NATIVE_REPO")
-            val tag = (project.findProperty("bigfredNativeTag") as String?)
-                ?.ifBlank { null }
-                ?: System.getenv("BIGFRED_NATIVE_TAG")
-            if (repo.isNullOrBlank() || tag.isNullOrBlank()) {
-                logger.warn(
-                    "libloco-server.so missing: build ../bigfred with 'make android' " +
-                        "or set bigfredNativeRepo + bigfredNativeTag",
-                )
-            } else {
-                val token = githubToken()
-                val url =
-                    "https://github.com/$repo/releases/download/$tag/loco-server-android-arm64"
-                val tmp = File(outDir, ".loco-server.download")
-                val conn = URI(url).toURL().openConnection() as HttpURLConnection
-                if (!token.isNullOrBlank()) {
-                    conn.setRequestProperty("Authorization", "Bearer $token")
-                    conn.setRequestProperty("Accept", "application/octet-stream")
-                }
-                conn.inputStream.use { input ->
-                    tmp.outputStream().use { output -> input.copyTo(output) }
-                }
-                tmp.renameTo(locoDest)
-                println("Downloaded libloco-server.so from $url")
+        val locoCached = prebuilt.file("libloco-server.so").asFile
+        when {
+            localLoco.asFile.isFile -> {
+                localLoco.asFile.copyTo(locoDest, overwrite = true)
+                println("Staged libloco-server.so from local ${localLoco.asFile}")
             }
+            locoCached.isFile -> {
+                locoCached.copyTo(locoDest, overwrite = true)
+                println("Staged libloco-server.so from ${locoCached.absolutePath}")
+            }
+            else -> {
+                val repo = (project.findProperty("bigfredNativeRepo") as String?)
+                    ?.ifBlank { null }
+                    ?: System.getenv("BIGFRED_NATIVE_REPO")
+                    ?: "dcc-bigfred/bigfred"
+                val tag = (project.findProperty("bigfredNativeTag") as String?)
+                    ?.ifBlank { null }
+                    ?: System.getenv("BIGFRED_NATIVE_TAG")
+                if (!tag.isNullOrBlank()) {
+                    val token = githubToken()
+                    val url =
+                        "https://github.com/$repo/releases/download/$tag/loco-server-android-arm64"
+                    val tmp = File(outDir, ".loco-server.download")
+                    val conn = URI(url).toURL().openConnection() as HttpURLConnection
+                    if (!token.isNullOrBlank()) {
+                        conn.setRequestProperty("Authorization", "Bearer $token")
+                        conn.setRequestProperty("Accept", "application/octet-stream")
+                    }
+                    conn.inputStream.use { input ->
+                        tmp.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    tmp.renameTo(locoDest)
+                    println("Downloaded libloco-server.so from $url")
+                } else {
+                    // Latest release asset (name differs from jni lib name).
+                    fetchLatestReleaseAsset(repo, "loco-server-android-arm64", locoDest)
+                }
+                locoDest.parentFile.mkdirs()
+                locoCached.parentFile.mkdirs()
+                locoDest.copyTo(locoCached, overwrite = true)
+            }
+        }
+        if (!locoDest.isFile || locoDest.length() < 1024) {
+            throw GradleException(
+                "libloco-server.so missing after fetch. " +
+                    "Build with 'make -C ../bigfred android', place it in native-prebuilt/arm64-v8a/, " +
+                    "or publish loco-server-android-arm64 on dcc-bigfred/bigfred releases.",
+            )
         }
     }
 }
