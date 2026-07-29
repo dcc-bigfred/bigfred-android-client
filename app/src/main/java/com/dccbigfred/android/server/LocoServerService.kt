@@ -28,7 +28,7 @@ import kotlinx.coroutines.runBlocking
 
 /**
  * Foreground service hosting Valkey + loco-server for "BigFred on phone".
- * Stage 1 uses `--no-supervisor`; stage 2 prepares PATH for supervisord binaries.
+ * Stage 1 uses `--no-supervisor`; stage 2 passes absolute jniLibs paths for supervisord.
  */
 class LocoServerService : Service() {
 
@@ -109,9 +109,9 @@ class LocoServerService : Service() {
 
         val locoBin = NativeBinaries.require(this, NativeBinaries.LOCO_SERVER)
         val valkeyBin = NativeBinaries.require(this, NativeBinaries.VALKEY)
-        val supervised = SupervisorPathHelper.installSupervisorBinaries(this) != null &&
-            NativeBinaries.file(this, NativeBinaries.SUPERVISORD).isFile &&
-            NativeBinaries.file(this, NativeBinaries.SUPERVISORCTL).isFile
+        val supervisordBin = NativeBinaries.file(this, NativeBinaries.SUPERVISORD)
+        val supervisorctlBin = NativeBinaries.file(this, NativeBinaries.SUPERVISORCTL)
+        val supervised = supervisordBin.isFile && supervisorctlBin.isFile
 
         val prefs = (application as BigFredApplication).serverPreferences
         val jwt = runBlocking { prefs.getOrCreateLocalJwtSecret() }
@@ -119,10 +119,10 @@ class LocoServerService : Service() {
         val env = HashMap(System.getenv())
         env["BIGFRED_DATA_DIR"] = paths.dataDir.absolutePath
         env["BIGFRED_JWT_SECRET"] = jwt
-        env["PATH"] = SupervisorPathHelper.prependPath(
-            env["PATH"],
-            supervisorBinDir().absolutePath,
-        )
+        if (supervised) {
+            // Shim resolves sibling libsupervisord.so; also set env for clarity.
+            env["SUPERVISORD_BIN"] = supervisordBin.absolutePath
+        }
 
         if (!supervised) {
             // Stage 1: FGS owns Valkey; loco-server runs without supervisord.
@@ -140,7 +140,12 @@ class LocoServerService : Service() {
         )
         if (supervised) {
             // Stage 2: loco-server owns supervisord → Valkey + dcc-bus.
-            Log.i(TAG, "starting supervised local mode (supervisord on PATH)")
+            // Execute from nativeLibraryDir (executable); never copy to code_cache (noexec).
+            locoArgs += listOf(
+                "--supervisord-bin", supervisordBin.absolutePath,
+                "--supervisorctl-bin", supervisorctlBin.absolutePath,
+            )
+            Log.i(TAG, "starting supervised local mode (jniLibs supervisord)")
         } else {
             locoArgs += listOf("--redis-external", "--no-supervisor")
             Log.i(TAG, "starting unmanaged local mode (--no-supervisor)")
@@ -259,15 +264,6 @@ class LocoServerService : Service() {
         } catch (_: Exception) {
         }
     }
-
-    /** Copy supervisord/ctl into codeCacheDir/bin so LookPath finds bare names. */
-    // Kept for tests / callers; delegates to SupervisorPathHelper.
-    fun installSupervisorPathHelpers() {
-        SupervisorPathHelper.installSupervisorBinaries(this)
-    }
-
-    private fun supervisorBinDir(): File =
-        File(codeCacheDir, "bin")
 
     /** java.lang.Process.pid() is only in the public Android SDK from API 31+. */
     private fun processPid(process: Process): Long {
