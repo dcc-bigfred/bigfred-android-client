@@ -145,6 +145,7 @@
     <string name="local_server_intro_body">BigFred ist als zentraler Hub gedacht — ein physisches Gerät neben der Zentrale, an das sich Telefone, WlanMäuse, WiFreds und LongFreds anbinden. Durch die Zentralisierung können mehrere Nutzer gemeinsam fahren; Funktionen wie Totmann und Notbremsung bei Reichweitenverlust sind möglich.\n\nWenn Sie die Hub-Software als BigFred auf dem Telefon starten, erhalten Sie eine funktions- und sicherheitsreduzierte Variante. Sie kann keinen Zug notbremsen, wenn der Akku leer ist, Sie können kein zweites Telefon anbinden und keine WlanMaus, keinen WiFred und keinen LongFred anschließen. Betrachten Sie das als Demo vor dem Kauf von Hardware für BigFred.</string>
     <string name="local_server_intro_back">Zurück</string>
     <string name="local_server_intro_confirm">Verstanden, trotzdem starten</string>
+    <string name="local_server_intro_multi_warning">Schließen Sie nicht mehrere vereinfachte BigFred-Instanzen gleichzeitig an dieselbe Anlage an. Ohne zentrales physisches Gerät nutzen Sie BigFred jeweils nur auf einem Telefon.</string>
     <string name="menu_local_server">BigFred auf dem Telefon: aktiv</string>
     <string name="local_server_status_title">BigFred auf dem Telefon</string>
     <string name="local_server_stop">Server stoppen</string>

@@ -145,6 +145,7 @@
     <string name="local_server_intro_body">BigFred is designed as a central hub — a physical device next to the command station that phones, WlanMaus units, WiFreds and LongFreds connect to. Centralisation lets multiple users drive together and enables features such as dead-man protection and emergency braking when radio range is lost.\n\nRunning hub software as BigFred on a phone gives you a cut-down build with fewer features and safeguards. It cannot emergency-brake a train if your phone battery dies, you cannot connect a second phone, and you cannot attach a WlanMaus, WiFred or LongFred. Treat it as a demo before buying hardware to run BigFred properly.</string>
     <string name="local_server_intro_back">Back</string>
     <string name="local_server_intro_confirm">I understand — start anyway</string>
+    <string name="local_server_intro_multi_warning">Do not connect multiple simplified BigFred instances to the same layout at once. Without a central physical device, use BigFred on only one phone at a time.</string>
     <string name="menu_local_server">BigFred on phone: running</string>
     <string name="local_server_status_title">BigFred on phone</string>
     <string name="local_server_stop">Stop server</string>
