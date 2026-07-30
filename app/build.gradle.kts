@@ -21,6 +21,44 @@ fun gitCommand(vararg args: String): String {
     }
 }
 
+fun resolveAppVersion(): Pair<String, Int> {
+    val envName = System.getenv("VERSION_NAME")?.trim().orEmpty()
+    val envCode = System.getenv("VERSION_CODE")?.trim()?.toIntOrNull()
+    if (envName.isNotEmpty() && envCode != null) {
+        return envName to envCode
+    }
+
+    val script = rootProject.projectDir.resolve("scripts/android-version.py")
+    require(script.isFile) { "Missing version script: ${script.absolutePath}" }
+    val process = ProcessBuilder("python3", script.absolutePath)
+        .directory(rootProject.projectDir)
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().readText().trim()
+    val code = process.waitFor()
+    if (code != 0) {
+        throw GradleException("android-version.py failed (exit $code):\n$output")
+    }
+    var name = ""
+    var versionCode = 0
+    for (line in output.lineSequence()) {
+        val parts = line.split("=", limit = 2)
+        if (parts.size != 2) continue
+        when (parts[0]) {
+            "VERSION_NAME" -> name = parts[1].trim()
+            "VERSION_CODE" -> versionCode = parts[1].trim().toInt()
+        }
+    }
+    require(name.isNotEmpty() && versionCode > 0) {
+        "android-version.py produced incomplete output:\n$output"
+    }
+    return name to versionCode
+}
+
+val appVersion = resolveAppVersion()
+val appVersionName = appVersion.first
+val appVersionCode = appVersion.second
+
 val gitCommitShort = (System.getenv("GITHUB_SHA")?.take(12)
     ?: gitCommand("rev-parse", "--short=12", "HEAD"))
     .ifEmpty { "unknown" }
@@ -40,8 +78,8 @@ android {
         applicationId = "com.dccbigfred.android"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.1"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         buildConfigField("String", "GIT_COMMIT", "\"$gitCommitShort\"")
         buildConfigField("String", "GIT_COMMIT_FULL", "\"$gitCommitFull\"")
