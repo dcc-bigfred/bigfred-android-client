@@ -185,5 +185,12 @@
     <string name="about_commit_full">Commit (vollständig)</string>
     <string name="about_commit_dirty">%1$s (dirty)</string>
     <string name="about_build_type">Build-Typ</string>
+    <string name="about_server_section">BigFred-Server</string>
+    <string name="about_server_version">Serverversion</string>
+    <string name="about_server_tag_commit">Server-Tag-Commit</string>
+    <string name="about_server_build_commit">Server-Build-Commit</string>
+    <string name="about_server_build_time">Server-Build-Zeit</string>
+    <string name="about_server_loading">…</string>
+    <string name="about_server_unavailable">nicht verfügbar</string>
     <string name="about_acknowledgements">Danksagung: hydrus.pl — Daten für den Modellkatalog; vielen Dank für die Erlaubnis zur Nutzung der Datenbank.</string>
 </resources>

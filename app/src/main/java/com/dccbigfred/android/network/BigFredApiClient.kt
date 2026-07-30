@@ -7,20 +7,62 @@ import com.dccbigfred.android.data.localvehicles.LocalVehicleEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 class BigFredApiClient(
     private val serverPreferences: ServerPreferences,
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = defaultClient(),
 ) {
     sealed interface SyncResult {
         data object Success : SyncResult
         data object Unauthorized : SyncResult
         data class Failure(val code: String) : SyncResult
+    }
+
+    data class ServerVersion(
+        val version: String,
+        val tagCommit: String,
+        val buildCommit: String,
+        val buildTime: String,
+    )
+
+    sealed interface VersionResult {
+        data class Success(val info: ServerVersion) : VersionResult
+        data object NoServer : VersionResult
+        data class Failure(val code: String) : VersionResult
+    }
+
+    /**
+     * GET /api/v1/version — public, no session cookie required.
+     * Reads the currently configured server base URL from preferences.
+     */
+    suspend fun getVersion(): VersionResult = withContext(Dispatchers.IO) {
+        val baseUrl = serverPreferences.serverBaseUrl.first()?.trimEnd('/')
+            ?: return@withContext VersionResult.NoServer
+
+        try {
+            val httpUrl = versionRequestUrl(baseUrl)
+                ?: return@withContext VersionResult.Failure("invalid_server_url")
+            val req = Request.Builder()
+                .url(httpUrl)
+                .get()
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext VersionResult.Failure("http_${resp.code}")
+                }
+                val body = resp.body?.string().orEmpty()
+                VersionResult.Success(parseVersionBody(body))
+            }
+        } catch (_: Exception) {
+            VersionResult.Failure("network_error")
+        }
     }
 
     suspend fun isLoggedIn(): Boolean = withContext(Dispatchers.IO) {
@@ -136,5 +178,27 @@ class BigFredApiClient(
 
     companion object {
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
+
+        fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
+            .callTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+
+        fun versionRequestUrl(baseUrl: String): okhttp3.HttpUrl? {
+            val trimmed = baseUrl.trim().trimEnd('/')
+            if (trimmed.isEmpty()) return null
+            return "$trimmed/api/v1/version".toHttpUrlOrNull()
+        }
+
+        fun parseVersionBody(body: String): ServerVersion {
+            val json = JSONObject(body)
+            return ServerVersion(
+                version = json.optString("version"),
+                tagCommit = json.optString("tagCommit"),
+                buildCommit = json.optString("buildCommit"),
+                buildTime = json.optString("buildTime"),
+            )
+        }
     }
 }
