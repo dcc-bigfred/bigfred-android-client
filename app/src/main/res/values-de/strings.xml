@@ -146,6 +146,7 @@
     <string name="local_server_intro_back">Zurück</string>
     <string name="local_server_intro_confirm">Verstanden, trotzdem starten</string>
     <string name="local_server_intro_multi_warning">Schließen Sie nicht mehrere vereinfachte BigFred-Instanzen gleichzeitig an dieselbe Anlage an. Ohne zentrales physisches Gerät nutzen Sie BigFred jeweils nur auf einem Telefon.</string>
+    <string name="local_server_intro_orange_bar_info">Der vereinfachte BigFred hat eine orangefarbene obere Leiste, um ihn vom BigFred auf einem zentralen physischen Gerät zu unterscheiden.</string>
     <string name="menu_local_server">BigFred auf dem Telefon: aktiv</string>
     <string name="local_server_status_title">BigFred auf dem Telefon</string>
     <string name="local_server_stop">Server stoppen</string>

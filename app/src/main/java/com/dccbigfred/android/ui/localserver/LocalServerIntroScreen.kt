@@ -103,6 +103,19 @@ fun LocalServerIntroScreen(
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Text(
+                    text = stringResource(R.string.local_server_intro_orange_bar_info),
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }

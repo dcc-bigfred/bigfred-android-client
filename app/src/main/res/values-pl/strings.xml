@@ -146,6 +146,7 @@
     <string name="local_server_intro_back">Cofnij</string>
     <string name="local_server_intro_confirm">Rozumiem, uruchom pomimo tego</string>
     <string name="local_server_intro_multi_warning">Nie należy do tej samej makiety podłączać wielu uproszczonych BigFredów na raz. Bez centralnego, fizycznego urządzenia korzystaj z BigFred tylko na jednym telefonie w jednym czasie</string>
+    <string name="local_server_intro_orange_bar_info">Uproszczony BigFred ma pomarańczową górną belkę dla odróżnienia od BigFreda, który jest uruchamiany na fizycznym, centralnym urządzeniu</string>
     <string name="menu_local_server">BigFred na telefonie: działa</string>
     <string name="local_server_status_title">BigFred na telefonie</string>
     <string name="local_server_stop">Zatrzymaj serwer</string>

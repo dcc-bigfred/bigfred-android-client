@@ -146,6 +146,7 @@
     <string name="local_server_intro_back">Back</string>
     <string name="local_server_intro_confirm">I understand — start anyway</string>
     <string name="local_server_intro_multi_warning">Do not connect multiple simplified BigFred instances to the same layout at once. Without a central physical device, use BigFred on only one phone at a time.</string>
+    <string name="local_server_intro_orange_bar_info">Simplified BigFred has an orange top bar to distinguish it from BigFred running on a central physical device.</string>
     <string name="menu_local_server">BigFred on phone: running</string>
     <string name="local_server_status_title">BigFred on phone</string>
     <string name="local_server_stop">Stop server</string>
