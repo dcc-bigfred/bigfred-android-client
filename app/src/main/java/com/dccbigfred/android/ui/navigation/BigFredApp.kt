@@ -161,6 +161,9 @@ fun BigFredApp(
     val selectedServerUrl = activeUrl ?: savedUrl
     val selectedServerUrlLatest by rememberUpdatedState(selectedServerUrl)
 
+    val localServerState by LocoServerService.state.collectAsStateWithLifecycle()
+    var localStartError by remember { mutableStateOf<String?>(null) }
+
     fun pushLocaleToSpa() {
         applyLocaleToWebView(spaWebView, LocalePrefs.resolvedWebLocale())
     }
@@ -169,13 +172,45 @@ fun BigFredApp(
         bootstrapped = true
         val url = savedUrl
         if (url != null) {
-            activeUrl = url
-            navController.navigate(Routes.WEBVIEW) {
-                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+            // Stale phone-mode hub: URL was persisted while the FGS ran, but the
+            // process may have been killed / stopped from the notification.
+            if (LocoServerService.isLocalUrl(url) &&
+                localServerState !is LocalServerState.Running
+            ) {
+                prefs.clearServerBaseUrl()
+                activeUrl = null
+                navController.navigate(Routes.DISCOVERY) {
+                    popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+                }
+            } else {
+                activeUrl = url
+                navController.navigate(Routes.WEBVIEW) {
+                    popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+                }
             }
         } else {
             navController.navigate(Routes.DISCOVERY) {
                 popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+            }
+        }
+    }
+
+    // Clear persisted 127.0.0.1 when the local server stops (notification stop,
+    // OS kill after restart, crash) so the next launch does not open a dead WebView.
+    LaunchedEffect(localServerState) {
+        if (localServerState is LocalServerState.Running ||
+            localServerState is LocalServerState.Starting
+        ) {
+            return@LaunchedEffect
+        }
+        val url = activeUrl ?: savedUrl
+        if (!LocoServerService.isLocalUrl(url)) return@LaunchedEffect
+        prefs.clearServerBaseUrl()
+        activeUrl = null
+        if (currentRoute == Routes.WEBVIEW) {
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
             }
         }
     }
@@ -261,9 +296,6 @@ fun BigFredApp(
             }
         }
     }
-
-    val localServerState by LocoServerService.state.collectAsStateWithLifecycle()
-    var localStartError by remember { mutableStateOf<String?>(null) }
 
     val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
