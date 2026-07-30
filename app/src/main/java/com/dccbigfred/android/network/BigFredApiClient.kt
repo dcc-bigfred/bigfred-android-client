@@ -23,6 +23,53 @@ class BigFredApiClient(
         data class Failure(val code: String) : SyncResult
     }
 
+    data class ServerVersion(
+        val version: String,
+        val tagCommit: String,
+        val buildCommit: String,
+        val buildTime: String,
+    )
+
+    sealed interface VersionResult {
+        data class Success(val info: ServerVersion) : VersionResult
+        data object NoServer : VersionResult
+        data class Failure(val code: String) : VersionResult
+    }
+
+    /**
+     * GET /api/v1/version — public, no session cookie required.
+     * Reads the currently configured server base URL from preferences.
+     */
+    suspend fun getVersion(): VersionResult = withContext(Dispatchers.IO) {
+        val baseUrl = serverPreferences.serverBaseUrl.first()?.trimEnd('/')
+            ?: return@withContext VersionResult.NoServer
+
+        val req = Request.Builder()
+            .url("$baseUrl/api/v1/version")
+            .get()
+            .build()
+
+        try {
+            client.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext VersionResult.Failure("http_${resp.code}")
+                }
+                val body = resp.body?.string().orEmpty()
+                val json = JSONObject(body)
+                VersionResult.Success(
+                    ServerVersion(
+                        version = json.optString("version"),
+                        tagCommit = json.optString("tagCommit"),
+                        buildCommit = json.optString("buildCommit"),
+                        buildTime = json.optString("buildTime"),
+                    ),
+                )
+            }
+        } catch (_: Exception) {
+            VersionResult.Failure("network_error")
+        }
+    }
+
     suspend fun isLoggedIn(): Boolean = withContext(Dispatchers.IO) {
         val baseUrl = serverPreferences.serverBaseUrl.first() ?: return@withContext false
         sessionCookie(baseUrl) != null
