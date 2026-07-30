@@ -1,6 +1,8 @@
 package com.dccbigfred.android
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -37,6 +39,21 @@ class MainActivity : AppCompatActivity() {
             BigFredTheme {
                 BigFredApp(openLocalWebViewRequests = openLocalWebViewRequests)
             }
+        }
+    }
+
+    /**
+     * Manual portrait ↔ landscape toggle for the SPA rotate button.
+     * Auto-rotate is disabled via android:screenOrientation="locked"; this
+     * locks to an explicit orientation until the next tap.
+     */
+    fun toggleScreenOrientation() {
+        val landscape =
+            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        requestedOrientation = if (landscape) {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
     }
 

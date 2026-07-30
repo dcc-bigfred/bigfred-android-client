@@ -52,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,7 +109,16 @@ fun BigFredApp(
     val context = LocalContext.current
     val app = context.applicationContext as BigFredApplication
     val prefs = app.serverPreferences
-    val savedUrl by prefs.serverBaseUrl.collectAsStateWithLifecycle(initialValue = null)
+    // Distinguish "DataStore not read yet" from "no saved server" so bootstrap
+    // does not race into Discovery before the persisted URL arrives.
+    var prefsReady by remember { mutableStateOf(false) }
+    var savedUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(prefs) {
+        prefs.serverBaseUrl.collect { url ->
+            savedUrl = url
+            prefsReady = true
+        }
+    }
     val volumeKeysThrottleEnabled by prefs.volumeKeysThrottleEnabled
         .collectAsStateWithLifecycle(initialValue = ServerPreferences.DEFAULT_VOLUME_KEYS_THROTTLE_ENABLED)
     val navController = rememberNavController()
@@ -117,7 +127,8 @@ fun BigFredApp(
     val wifiLock = remember { LowLatencyWifiLock(context) }
     val companionProbe = remember { CompanionServiceProbe() }
 
-    var bootstrapped by remember { mutableStateOf(false) }
+    // Survive Activity recreation so a restored Nav back stack is not overwritten.
+    var bootstrapped by rememberSaveable { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
     var spaWebView by remember { mutableStateOf<WebView?>(null) }
     var throttleHardwareKeysActive by remember { mutableStateOf(false) }
@@ -153,12 +164,20 @@ fun BigFredApp(
     fun pushLocaleToSpa() {
         applyLocaleToWebView(spaWebView, LocalePrefs.resolvedWebLocale())
     }
-    LaunchedEffect(Unit) {
-        if (bootstrapped) return@LaunchedEffect
-        navController.navigate(Routes.DISCOVERY) {
-            popUpTo(Routes.BOOTSTRAP) { inclusive = true }
-        }
+    LaunchedEffect(prefsReady, savedUrl) {
+        if (!prefsReady || bootstrapped) return@LaunchedEffect
         bootstrapped = true
+        val url = savedUrl
+        if (url != null) {
+            activeUrl = url
+            navController.navigate(Routes.WEBVIEW) {
+                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+            }
+        } else {
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+            }
+        }
     }
 
     LaunchedEffect(selectedServerUrl) {
@@ -511,6 +530,9 @@ fun BigFredApp(
                             onWebViewReady = { spaWebView = it },
                             onThrottleHardwareKeysActive = { active ->
                                 throttleHardwareKeysActive = active
+                            },
+                            onRotateScreen = {
+                                activity?.toggleScreenOrientation()
                             },
                         )
                     }

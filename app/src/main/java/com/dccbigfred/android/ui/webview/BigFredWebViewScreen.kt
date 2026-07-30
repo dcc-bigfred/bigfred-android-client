@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,10 +71,15 @@ fun BigFredWebViewScreen(
     baseUrl: String,
     onWebViewReady: ((WebView?) -> Unit)? = null,
     onThrottleHardwareKeysActive: ((Boolean) -> Unit)? = null,
+    onRotateScreen: (() -> Unit)? = null,
 ) {
     // Freeze the URL for this WebView session so DataStore / nav recompositions
     // with the same address do not trigger a reload (which would churn the WS).
-    val sessionUrl = remember(baseUrl) { baseUrl.trimEnd('/') + "/" }
+    val sessionBase = remember(baseUrl) { baseUrl.trimEnd('/') }
+    val sessionUrl = remember(sessionBase) { "$sessionBase/" }
+    // Survive unavoidable Activity recreation (e.g. process death) so we can
+    // reload /throttle instead of always starting at "/".
+    var lastSpaUrl by rememberSaveable(sessionBase) { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<KeepAliveWebView?>(null) }
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -82,7 +88,15 @@ fun BigFredWebViewScreen(
     val openPicker by rememberUpdatedState(newValue = { pickerVisible = true })
     val onReady by rememberUpdatedState(onWebViewReady)
     val onHardwareKeysActive by rememberUpdatedState(onThrottleHardwareKeysActive)
+    val onRotate by rememberUpdatedState(onRotateScreen)
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun rememberSpaUrl(url: String?) {
+        if (url.isNullOrBlank()) return
+        if (url == "about:blank") return
+        if (!url.startsWith(sessionBase)) return
+        lastSpaUrl = url
+    }
 
     BackHandler(enabled = pickerVisible) {
         deliverModelPickResult(webView, null)
@@ -179,6 +193,9 @@ fun BigFredWebViewScreen(
                             onThrottleHardwareKeysActive = { active ->
                                 post { onHardwareKeysActive?.invoke(active) }
                             },
+                            onRotateScreen = {
+                                post { onRotate?.invoke() }
+                            },
                         ),
                         "BigFredNativeApp",
                     )
@@ -195,6 +212,7 @@ fun BigFredWebViewScreen(
                         override fun onPageFinished(view: WebView, url: String?) {
                             loading = false
                             canGoBack = view.canGoBack()
+                            rememberSpaUrl(url)
                             view.requestFocus()
                             applyLocaleToWebView(view, LocalePrefs.resolvedWebLocale())
                         }
@@ -206,6 +224,7 @@ fun BigFredWebViewScreen(
                         ) {
                             loading = true
                             loadError = null
+                            rememberSpaUrl(url)
                             // Navigation clears SPA handlers; reclaim system volume until
                             // a throttle surface re-registers.
                             onHardwareKeysActive?.invoke(false)
@@ -217,6 +236,7 @@ fun BigFredWebViewScreen(
                             isReload: Boolean,
                         ) {
                             canGoBack = view.canGoBack()
+                            rememberSpaUrl(url)
                         }
 
                         override fun onReceivedError(
@@ -268,7 +288,14 @@ fun BigFredWebViewScreen(
                     }
                     // Tag before load so the first update{} pass does not reload.
                     tag = sessionUrl
-                    loadUrl(sessionUrl)
+                    val restored = lastSpaUrl
+                    val initialUrl =
+                        if (restored != null && restored.startsWith(sessionBase)) {
+                            restored
+                        } else {
+                            sessionUrl
+                        }
+                    loadUrl(initialUrl)
                     webView = this
                     onReady?.invoke(this)
                     requestFocus()
