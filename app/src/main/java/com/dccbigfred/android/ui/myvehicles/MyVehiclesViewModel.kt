@@ -49,6 +49,11 @@ enum class MyVehicleSortColumn(val selector: (LocalVehicleEntity) -> String?) {
 
 enum class RowFlash { SUCCESS, ERROR }
 
+sealed interface SaveEvent {
+    data class PromptSync(val entity: LocalVehicleEntity) : SaveEvent
+    data object ShowOfflineCopyHint : SaveEvent
+}
+
 data class BannerError(
     val id: Long,
     val vehicleName: String,
@@ -89,6 +94,9 @@ class MyVehiclesViewModel(application: Application) : AndroidViewModel(applicati
     private val _messages = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val messages: SharedFlow<Int> = _messages.asSharedFlow()
 
+    private val _saveEvents = MutableSharedFlow<SaveEvent>(extraBufferCapacity = 1)
+    val saveEvents: SharedFlow<SaveEvent> = _saveEvents.asSharedFlow()
+
     val catalogIcons: List<CatalogIcon> by lazy { modelsRepo.listIcons() }
 
     fun toggleSort(column: MyVehicleSortColumn) {
@@ -109,8 +117,16 @@ class MyVehiclesViewModel(application: Application) : AndroidViewModel(applicati
         _banners.update { list -> list.filterNot { it.id == id } }
     }
 
-    fun save(entity: LocalVehicleEntity) {
-        viewModelScope.launch { repo.upsert(entity) }
+    fun save(entity: LocalVehicleEntity, isNew: Boolean) {
+        viewModelScope.launch {
+            repo.upsert(entity)
+            if (!isNew) return@launch
+            if (api.isLoggedIn()) {
+                _saveEvents.emit(SaveEvent.PromptSync(entity))
+            } else {
+                _saveEvents.emit(SaveEvent.ShowOfflineCopyHint)
+            }
+        }
     }
 
     fun delete(entity: LocalVehicleEntity) {

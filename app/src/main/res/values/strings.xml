@@ -213,5 +213,12 @@
     <string name="about_commit_full">Commit (full)</string>
     <string name="about_commit_dirty">%1$s (dirty)</string>
     <string name="about_build_type">Build type</string>
+    <string name="about_server_section">BigFred server</string>
+    <string name="about_server_version">Server version</string>
+    <string name="about_server_tag_commit">Server tag commit</string>
+    <string name="about_server_build_commit">Server build commit</string>
+    <string name="about_server_build_time">Server build time</string>
+    <string name="about_server_loading">…</string>
+    <string name="about_server_unavailable">unavailable</string>
     <string name="about_acknowledgements">Acknowledgements: hydrus.pl — model catalog data; thank you for permission to use the database.</string>
 </resources>
