@@ -131,10 +131,7 @@ fun LocalServerStatusScreen(
             }
 
             OutlinedButton(
-                onClick = {
-                    LocoServerService.stop(context)
-                    LocoServerService.start(context)
-                },
+                onClick = { LocoServerService.restart(context) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = state !is LocalServerState.Starting,
             ) {

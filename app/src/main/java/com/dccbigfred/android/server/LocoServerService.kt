@@ -47,43 +47,81 @@ class LocoServerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
-                stopLocalServer()
-                stopSelf()
+                stopLocalServer(startId)
                 return START_NOT_STICKY
             }
+            ACTION_RESTART -> restartLocalServer()
             ACTION_START, null -> {
-                if (booting.compareAndSet(false, true)) {
-                    _state.value = LocalServerState.Starting
-                    try {
-                        startForegroundNotification()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "startForeground failed", e)
-                        booting.set(false)
-                        _state.value = LocalServerState.Failed(e.message ?: e.toString())
-                        stopSelf()
-                        return START_NOT_STICKY
-                    }
-                    acquireWakeLock()
-                    bootThread = thread(name = "loco-server-boot", isDaemon = true) {
-                        try {
-                            boot()
-                        } catch (e: InterruptedException) {
-                            // stop requested during boot — cleanup already done by stopLocalServer
-                            Log.i(TAG, "boot interrupted, stopping")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "local server start failed", e)
-                            cleanupChildren()
-                            releaseWakeLock()
-                            _state.value = LocalServerState.Failed(e.message ?: e.toString())
-                            stopSelf()
-                        } finally {
-                            booting.set(false)
-                        }
-                    }
+                if (!running.get()) {
+                    startLocalServer()
                 }
             }
         }
         return START_STICKY
+    }
+
+    private fun startLocalServer() {
+        if (!booting.compareAndSet(false, true)) return
+        _state.value = LocalServerState.Starting
+        try {
+            startForegroundNotification()
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground failed", e)
+            booting.set(false)
+            _state.value = LocalServerState.Failed(e.message ?: e.toString())
+            stopSelf()
+            return
+        }
+        acquireWakeLock()
+        launchBoot(restart = false)
+    }
+
+    private fun restartLocalServer() {
+        if (!booting.compareAndSet(false, true)) return
+        _state.value = LocalServerState.Starting
+        try {
+            startForegroundNotification()
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground failed during restart", e)
+            booting.set(false)
+            _state.value = LocalServerState.Failed(e.message ?: e.toString())
+            stopSelf()
+            return
+        }
+        acquireWakeLock()
+        launchBoot(restart = true)
+    }
+
+    private fun launchBoot(restart: Boolean) {
+        bootThread = thread(
+            name = if (restart) "loco-server-restart" else "loco-server-boot",
+            isDaemon = true,
+        ) {
+            try {
+                if (restart) {
+                    running.set(false)
+                    watchdogThread?.interrupt()
+                    watchdogThread = null
+                    cleanupChildren()
+                    ensureBootActive()
+                }
+                boot()
+            } catch (e: InterruptedException) {
+                Log.i(TAG, "boot interrupted, stopping")
+                cleanupChildren()
+            } catch (e: Exception) {
+                Log.e(TAG, "local server start failed", e)
+                cleanupChildren()
+                releaseWakeLock()
+                _state.value = LocalServerState.Failed(e.message ?: e.toString())
+                stopSelf()
+            } finally {
+                if (bootThread === Thread.currentThread()) {
+                    bootThread = null
+                }
+                booting.set(false)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -104,12 +142,14 @@ class LocoServerService : Service() {
 
     private fun boot() {
         _state.value = LocalServerState.Starting
+        ensureBootActive()
         val paths = LocalServerPaths.from(this)
         paths.ensureDirs()
 
         ProcessOrphanReaper.reap(paths.locoServerPid, NativeBinaries.LOCO_SERVER)
         ProcessOrphanReaper.reap(paths.valkeyPid, NativeBinaries.VALKEY)
         ProcessOrphanReaper.reap(paths.supervisordPid, NativeBinaries.SUPERVISORD)
+        ensureBootActive()
 
         if (ProcessOrphanReaper.isPortOpen("127.0.0.1", HTTP_PORT) &&
             ProcessOrphanReaper.readPid(paths.locoServerPid) == null
@@ -145,6 +185,7 @@ class LocoServerService : Service() {
             bootUnmanagedValkey(paths, valkeyBin)
         }
 
+        ensureBootActive()
         val locoLog = File(paths.logsDir, "loco-server.log")
         val locoArgs = mutableListOf(
             locoBin.absolutePath,
@@ -173,6 +214,7 @@ class LocoServerService : Service() {
             .redirectOutput(ProcessBuilder.Redirect.appendTo(locoLog))
             .also { it.environment().clear(); it.environment().putAll(env) }
             .start()
+        ensureBootActive()
         ProcessOrphanReaper.writePid(paths.locoServerPid, processPid(locoProcess!!))
 
         waitForHttpReady(45_000)
@@ -188,6 +230,7 @@ class LocoServerService : Service() {
     }
 
     private fun bootUnmanagedValkey(paths: LocalServerPaths, valkeyBin: File) {
+        ensureBootActive()
         val valkeyLog = File(paths.logsDir, "valkey.log")
         valkeyProcess = ProcessBuilder(
             valkeyBin.absolutePath,
@@ -201,8 +244,15 @@ class LocoServerService : Service() {
         ).redirectErrorStream(true)
             .redirectOutput(ProcessBuilder.Redirect.appendTo(valkeyLog))
             .start()
+        ensureBootActive()
         ProcessOrphanReaper.writePid(paths.valkeyPid, processPid(valkeyProcess!!))
         waitForPort("127.0.0.1", REDIS_PORT, 15_000)
+    }
+
+    private fun ensureBootActive() {
+        if (Thread.currentThread().isInterrupted || !booting.get()) {
+            throw InterruptedException("local server boot cancelled")
+        }
     }
 
     private fun waitForPort(host: String, port: Int, timeoutMs: Long) {
@@ -262,21 +312,21 @@ class LocoServerService : Service() {
         }
     }
 
-    private fun stopLocalServer() {
+    private fun stopLocalServer(startId: Int) {
         running.set(false)
         booting.set(false)
         bootThread?.interrupt()
-        bootThread = null
         watchdogThread?.interrupt()
         watchdogThread = null
-        cleanupChildren()
-        val paths = LocalServerPaths.from(this)
-        paths.locoServerPid.delete()
-        paths.valkeyPid.delete()
-        paths.supervisordPid.delete()
         _state.value = LocalServerState.Stopped
+        thread(name = "loco-server-stop", isDaemon = true) {
+            cleanupChildren()
+            releaseWakeLock()
+            stopSelf(startId)
+        }
     }
 
+    @Synchronized
     private fun cleanupChildren() {
         listOf(locoProcess, valkeyProcess).forEach { proc ->
             proc ?: return@forEach
@@ -391,6 +441,7 @@ class LocoServerService : Service() {
         const val EXTRA_OPEN_LOCAL_WEBVIEW = "com.dccbigfred.android.OPEN_LOCAL_WEBVIEW"
         const val ACTION_START = "com.dccbigfred.android.server.START"
         const val ACTION_STOP = "com.dccbigfred.android.server.STOP"
+        const val ACTION_RESTART = "com.dccbigfred.android.server.RESTART"
 
         private val _state = MutableStateFlow<LocalServerState>(LocalServerState.Stopped)
         val state: StateFlow<LocalServerState> = _state.asStateFlow()
@@ -413,6 +464,16 @@ class LocoServerService : Service() {
         fun stop(context: Context) {
             val intent = Intent(context, LocoServerService::class.java).setAction(ACTION_STOP)
             context.startService(intent)
+        }
+
+        fun restart(context: Context) {
+            val intent = Intent(context, LocoServerService::class.java).setAction(ACTION_RESTART)
+            try {
+                context.startForegroundService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "restart foreground service failed", e)
+                _state.value = LocalServerState.Failed(e.message ?: e.toString())
+            }
         }
 
         fun isLocalUrl(url: String?): Boolean =
