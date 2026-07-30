@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +40,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -50,6 +52,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,11 +72,16 @@ import com.dccbigfred.android.MainActivity
 import com.dccbigfred.android.R
 import com.dccbigfred.android.data.ServerPreferences
 import com.dccbigfred.android.locale.LocalePrefs
+import com.dccbigfred.android.models.ModelRow
 import com.dccbigfred.android.network.CompanionServiceProbe
 import com.dccbigfred.android.network.CompanionServices
+import com.dccbigfred.android.server.LocalServerState
+import com.dccbigfred.android.server.LocoServerService
 import com.dccbigfred.android.ui.about.AboutScreen
 import com.dccbigfred.android.ui.connection.ConnectionStatusScreen
 import com.dccbigfred.android.ui.discovery.DiscoveryScreen
+import com.dccbigfred.android.ui.localserver.LocalServerIntroScreen
+import com.dccbigfred.android.ui.localserver.LocalServerStatusScreen
 import com.dccbigfred.android.ui.models.ModelsCatalogScreen
 import com.dccbigfred.android.ui.myvehicles.MyVehiclesScreen
 import com.dccbigfred.android.ui.myvehicles.MyVehiclesViewModel
@@ -83,6 +91,8 @@ import com.dccbigfred.android.ui.webview.applyLocaleToWebView
 import com.dccbigfred.android.ui.webview.deliverThrottleHardwareKeys
 import com.dccbigfred.android.ui.webview.handleVolumeKeyEvent
 import com.dccbigfred.android.wifi.LowLatencyWifiLock
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 /** Hit target / drag strip at the physical left edge. */
@@ -93,11 +103,22 @@ private val DrawerHandleHeight = 56.dp
 private const val DrawerOpenDragThresholdPx = 40f
 
 @Composable
-fun BigFredApp() {
+fun BigFredApp(
+    openLocalWebViewRequests: Flow<Unit> = emptyFlow(),
+) {
     val context = LocalContext.current
     val app = context.applicationContext as BigFredApplication
     val prefs = app.serverPreferences
-    val savedUrl by prefs.serverBaseUrl.collectAsStateWithLifecycle(initialValue = null)
+    // Distinguish "DataStore not read yet" from "no saved server" so bootstrap
+    // does not race into Discovery before the persisted URL arrives.
+    var prefsReady by remember { mutableStateOf(false) }
+    var savedUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(prefs) {
+        prefs.serverBaseUrl.collect { url ->
+            savedUrl = url
+            prefsReady = true
+        }
+    }
     val volumeKeysThrottleEnabled by prefs.volumeKeysThrottleEnabled
         .collectAsStateWithLifecycle(initialValue = ServerPreferences.DEFAULT_VOLUME_KEYS_THROTTLE_ENABLED)
     val navController = rememberNavController()
@@ -106,7 +127,8 @@ fun BigFredApp() {
     val wifiLock = remember { LowLatencyWifiLock(context) }
     val companionProbe = remember { CompanionServiceProbe() }
 
-    var bootstrapped by remember { mutableStateOf(false) }
+    // Survive Activity recreation so a restored Nav back stack is not overwritten.
+    var bootstrapped by rememberSaveable { mutableStateOf(false) }
     var activeUrl by remember { mutableStateOf<String?>(null) }
     var spaWebView by remember { mutableStateOf<WebView?>(null) }
     var throttleHardwareKeysActive by remember { mutableStateOf(false) }
@@ -139,15 +161,58 @@ fun BigFredApp() {
     val selectedServerUrl = activeUrl ?: savedUrl
     val selectedServerUrlLatest by rememberUpdatedState(selectedServerUrl)
 
+    val localServerState by LocoServerService.state.collectAsStateWithLifecycle()
+    var localStartError by remember { mutableStateOf<String?>(null) }
+
     fun pushLocaleToSpa() {
         applyLocaleToWebView(spaWebView, LocalePrefs.resolvedWebLocale())
     }
-    LaunchedEffect(Unit) {
-        if (bootstrapped) return@LaunchedEffect
-        navController.navigate(Routes.DISCOVERY) {
-            popUpTo(Routes.BOOTSTRAP) { inclusive = true }
-        }
+    LaunchedEffect(prefsReady, savedUrl) {
+        if (!prefsReady || bootstrapped) return@LaunchedEffect
         bootstrapped = true
+        val url = savedUrl
+        if (url != null) {
+            // Stale phone-mode hub: URL was persisted while the FGS ran, but the
+            // process may have been killed / stopped from the notification.
+            if (LocoServerService.isLocalUrl(url) &&
+                localServerState !is LocalServerState.Running
+            ) {
+                prefs.clearServerBaseUrl()
+                activeUrl = null
+                navController.navigate(Routes.DISCOVERY) {
+                    popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+                }
+            } else {
+                activeUrl = url
+                navController.navigate(Routes.WEBVIEW) {
+                    popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+                }
+            }
+        } else {
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(Routes.BOOTSTRAP) { inclusive = true }
+            }
+        }
+    }
+
+    // Clear persisted 127.0.0.1 when the local server stops (notification stop,
+    // OS kill after restart, crash) so the next launch does not open a dead WebView.
+    LaunchedEffect(localServerState) {
+        if (localServerState is LocalServerState.Running ||
+            localServerState is LocalServerState.Starting
+        ) {
+            return@LaunchedEffect
+        }
+        val url = activeUrl ?: savedUrl
+        if (!LocoServerService.isLocalUrl(url)) return@LaunchedEffect
+        prefs.clearServerBaseUrl()
+        activeUrl = null
+        if (currentRoute == Routes.WEBVIEW) {
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
     }
 
     LaunchedEffect(selectedServerUrl) {
@@ -175,6 +240,21 @@ fun BigFredApp() {
                 launchSingleTop = true
             }
             drawerState.close()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        openLocalWebViewRequests.collect {
+            when (val s = LocoServerService.state.value) {
+                is LocalServerState.Running -> goToWebView(s.baseUrl)
+                else -> {
+                    // Server not ready yet — show the status screen instead of
+                    // opening an unreachable WebView at 127.0.0.1:8080.
+                    navController.navigate(Routes.LOCAL_SERVER) {
+                        launchSingleTop = true
+                    }
+                }
+            }
         }
     }
 
@@ -217,11 +297,66 @@ fun BigFredApp() {
         }
     }
 
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { /* proceed regardless — FGS may still start with silent notifications denied */ }
+
+    fun startLocalServer() {
+        scope.launch {
+            localStartError = null
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS,
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (!granted) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            // Status screen shows Starting / Failed / Running while boot runs.
+            navController.navigate(Routes.LOCAL_SERVER) {
+                launchSingleTop = true
+                popUpTo(Routes.LOCAL_SERVER_INTRO) { inclusive = true }
+            }
+            LocoServerService.start(context)
+            val deadline = System.currentTimeMillis() + 60_000
+            while (System.currentTimeMillis() < deadline) {
+                when (val s = LocoServerService.state.value) {
+                    is LocalServerState.Running -> {
+                        goToWebView(s.baseUrl)
+                        return@launch
+                    }
+                    is LocalServerState.Failed -> {
+                        localStartError = s.message
+                        return@launch
+                    }
+                    else -> kotlinx.coroutines.delay(300)
+                }
+            }
+            localStartError = "timeout"
+        }
+    }
+
+    fun stopLocalServerAndDiscover() {
+        scope.launch {
+            LocoServerService.stop(context)
+            prefs.clearServerBaseUrl()
+            activeUrl = null
+            navController.navigate(Routes.DISCOVERY) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+            drawerState.close()
+        }
+    }
+
     fun logoutFromServer() {
         scope.launch {
             drawerState.close()
             val url = selectedServerUrl
-            if (url != null) {
+            if (LocoServerService.isLocalUrl(url)) {
+                LocoServerService.stop(context)
+            } else if (url != null) {
                 app.bigFredApiClient.logout(url)
             }
             prefs.clearServerBaseUrl()
@@ -259,6 +394,23 @@ fun BigFredApp() {
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         onClick = { openBigFredApp() },
                     )
+                    if (localServerState is LocalServerState.Running ||
+                        LocoServerService.isLocalUrl(selectedServerUrl)
+                    ) {
+                        NavigationDrawerItem(
+                            label = { Text(stringResource(R.string.menu_local_server)) },
+                            selected = currentRoute == Routes.LOCAL_SERVER,
+                            icon = { Icon(Icons.Default.PhoneAndroid, contentDescription = null) },
+                            onClick = {
+                                scope.launch {
+                                    drawerState.close()
+                                    navController.navigate(Routes.LOCAL_SERVER) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            },
+                        )
+                    }
                     NavigationDrawerItem(
                         label = { Text(stringResource(R.string.menu_settings)) },
                         selected = currentRoute == Routes.SETTINGS,
@@ -298,7 +450,10 @@ fun BigFredApp() {
                             }
                         },
                     )
-                    if (selectedServerUrl != null) {
+                    if (selectedServerUrl != null &&
+                        localServerState !is LocalServerState.Running &&
+                        !LocoServerService.isLocalUrl(selectedServerUrl)
+                    ) {
                         NavigationDrawerItem(
                             label = { Text(stringResource(R.string.menu_connection_status)) },
                             selected = currentRoute == Routes.CONNECTION,
@@ -408,6 +563,9 @@ fun BigFredApp() {
                             onThrottleHardwareKeysActive = { active ->
                                 throttleHardwareKeysActive = active
                             },
+                            onRotateScreen = {
+                                activity?.toggleScreenOrientation()
+                            },
                         )
                     }
                 }
@@ -429,7 +587,32 @@ fun BigFredApp() {
                     }
                 }
                 composable(Routes.DISCOVERY) {
-                    DiscoveryScreen(onServerSelected = { url -> goToWebView(url) })
+                    DiscoveryScreen(
+                        onServerSelected = { url -> goToWebView(url) },
+                        localServerRunning = localServerState is LocalServerState.Running,
+                        onOpenLocalStatus = {
+                            navController.navigate(Routes.LOCAL_SERVER) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onOpenLocalIntro = {
+                            navController.navigate(Routes.LOCAL_SERVER_INTRO) {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                }
+                composable(Routes.LOCAL_SERVER_INTRO) {
+                    LocalServerIntroScreen(
+                        onBack = { navController.popBackStack() },
+                        onConfirmStart = { startLocalServer() },
+                    )
+                }
+                composable(Routes.LOCAL_SERVER) {
+                    LocalServerStatusScreen(
+                        onOpenApp = { openBigFredApp() },
+                        onStopped = { stopLocalServerAndDiscover() },
+                    )
                 }
                 composable(Routes.WEBVIEW) {
                     if (webSessionUrl == null) {
@@ -486,11 +669,12 @@ fun BigFredApp() {
                     ModelsCatalogScreen(
                         onBack = { navController.popBackStack() },
                         onAddToMyVehicles = { row ->
+                            val entity = MyVehiclesViewModel.fromModelRow(
+                                row,
+                                uuid = java.util.UUID.randomUUID().toString(),
+                            )
                             scope.launch {
-                                val repo = app.localVehicleRepository
-                                repo.upsert(
-                                    MyVehiclesViewModel.fromModelRow(row, repo.newUuid()),
-                                )
+                                app.localVehicleRepository.upsert(entity)
                             }
                         },
                     )
@@ -520,6 +704,21 @@ fun BigFredApp() {
                 )
             }
         }
+    }
+
+    if (localStartError != null) {
+        AlertDialog(
+            onDismissRequest = { localStartError = null },
+            title = { Text(stringResource(R.string.discovery_on_phone_title)) },
+            text = {
+                Text(stringResource(R.string.discovery_on_phone_failed, localStartError!!))
+            },
+            confirmButton = {
+                TextButton(onClick = { localStartError = null }) {
+                    Text(stringResource(R.string.discovery_on_phone_cancel))
+                }
+            },
+        )
     }
 }
 

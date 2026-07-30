@@ -10,6 +10,7 @@ import com.dccbigfred.android.locale.LocalePrefs
 class BigFredJsBridge(
     private val onOpenModelPicker: () -> Unit,
     private val onThrottleHardwareKeysActive: (Boolean) -> Unit = {},
+    private val onRotateScreen: () -> Unit = {},
 ) {
     @JavascriptInterface
     fun openModelPicker() {
@@ -28,5 +29,11 @@ class BigFredJsBridge(
     @JavascriptInterface
     fun setThrottleHardwareKeysActive(active: Boolean) {
         onThrottleHardwareKeysActive(active)
+    }
+
+    /** Toggle locked portrait/landscape (manual — no sensor auto-rotate). */
+    @JavascriptInterface
+    fun rotateScreen() {
+        onRotateScreen()
     }
 }

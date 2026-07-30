@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +64,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun DiscoveryScreen(
     onServerSelected: (String) -> Unit,
+    localServerRunning: Boolean = false,
+    onOpenLocalStatus: () -> Unit = {},
+    onOpenLocalIntro: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val discovery = remember { ServerDiscovery(context) }
@@ -75,6 +79,7 @@ fun DiscoveryScreen(
     var manualError by remember { mutableStateOf<String?>(null) }
     var manualBusy by remember { mutableStateOf(false) }
     var manualExpanded by remember { mutableStateOf(false) }
+    var phoneExpanded by remember { mutableStateOf(false) }
 
     val errorHostRequired = stringResource(R.string.discovery_error_host_required)
     val errorUnreachable = stringResource(R.string.discovery_error_unreachable)
@@ -178,6 +183,54 @@ fun DiscoveryScreen(
                     items(servers, key = { it.baseUrl }) { server ->
                         ServerRow(server = server, onClick = { onServerSelected(server.baseUrl) })
                         HorizontalDivider()
+                    }
+                }
+
+                // Simplified on-phone hub — same expandable style as Manual, above it.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { phoneExpanded = !phoneExpanded }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.discovery_phone_section),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (phoneExpanded) {
+                            Icons.Default.ExpandLess
+                        } else {
+                            Icons.Default.ExpandMore
+                        },
+                        contentDescription = null,
+                    )
+                }
+                AnimatedVisibility(visible = phoneExpanded) {
+                    Column {
+                        if (localServerRunning) {
+                            ListItem(
+                                headlineContent = {
+                                    Text(stringResource(R.string.discovery_on_phone_running))
+                                },
+                                leadingContent = {
+                                    Icon(Icons.Default.PhoneAndroid, contentDescription = null)
+                                },
+                                modifier = Modifier.clickable(onClick = onOpenLocalStatus),
+                            )
+                        } else {
+                            Button(
+                                onClick = onOpenLocalIntro,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Default.PhoneAndroid, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.discovery_on_phone_builtin))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 

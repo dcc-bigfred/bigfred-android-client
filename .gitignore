@@ -37,3 +37,7 @@ google-services.json
 app/src/main/assets/models/
 tools/hydrus-import/out/
 tools/hydrus-import/__pycache__/
+
+# Native prebuilts (GHCR + deps-android-* GitHub Releases) and staged jniLibs
+native-prebuilt/
+app/src/main/jniLibs/

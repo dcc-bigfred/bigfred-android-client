@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   test-and-build:
@@ -76,6 +77,20 @@ jobs:
           echo "$BIGFRED_STORE_FILE_CONTENT" | base64 -d > "${RUNNER_TEMP}/bigfred-release.jks"
           echo "BIGFRED_STORE_FILE=${RUNNER_TEMP}/bigfred-release.jks" >> "$GITHUB_ENV"
 
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Fetch native prebuilts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BIGFRED_OCI_TAG: ${{ vars.BIGFRED_OCI_TAG }}
+        run: |
+          set -euo pipefail
+          TAG="${BIGFRED_OCI_TAG:-main}"
+          echo "Using loco-server OCI tag: ${TAG}"
+          make native-prebuilt BIGFRED_OCI_TAG="${TAG}"
+          ls -lh native-prebuilt/arm64-v8a/
+
       - name: Unit tests
         env:
           GRADLE_FLAGS: ""
@@ -87,7 +102,16 @@ jobs:
           BIGFRED_STORE_PASSWORD: ${{ secrets.BIGFRED_STORE_PASSWORD }}
           BIGFRED_KEY_ALIAS: ${{ secrets.BIGFRED_KEY_ALIAS }}
           BIGFRED_KEY_PASSWORD: ${{ secrets.BIGFRED_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: make apk
+
+      - name: Verify APK contains loco-server
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libloco-server\.so' 
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libvalkey-server\.so'
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libsupervisord\.so'
 
       - name: Stage APK artifact
         run: |
