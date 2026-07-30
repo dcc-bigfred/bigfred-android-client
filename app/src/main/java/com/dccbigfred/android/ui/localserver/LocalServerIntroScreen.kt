@@ -76,20 +76,6 @@ fun LocalServerIntroScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onConfirmStart,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.local_server_intro_confirm))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.local_server_intro_back))
-            }
             Spacer(modifier = Modifier.height(16.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -115,6 +101,20 @@ fun LocalServerIntroScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onConfirmStart,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.local_server_intro_confirm))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.local_server_intro_back))
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
