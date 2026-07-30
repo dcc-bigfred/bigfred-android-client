@@ -22,6 +22,7 @@ ASSETS_MODELS := app/src/main/assets/models
 
 NATIVE_PREBUILT := native-prebuilt/arm64-v8a
 LOCO_SO         := $(NATIVE_PREBUILT)/libloco-server.so
+LOCAL_LOCO_BIN  := ../bigfred/bin/loco-server-android-arm64
 VALKEY_SO       := $(NATIVE_PREBUILT)/libvalkey-server.so
 SUPERVISORD_SO  := $(NATIVE_PREBUILT)/libsupervisord.so
 SUPERVISORCTL_SO := $(NATIVE_PREBUILT)/libsupervisorctl.so
@@ -43,7 +44,7 @@ help:
 	@echo "  make test-android        Run instrumented tests (device/emulator required)"
 	@echo "  make debug               Build debug APK → $(APK_DEBUG)"
 	@echo "  make import-models       Import hydrus models DB + thumbs → $(ASSETS_MODELS)"
-	@echo "  make loco-android        Fetch $(LOCO_SO) from $(BIGFRED_OCI_IMAGE):$(BIGFRED_OCI_TAG) (skip if exists; FORCE=1)"
+	@echo "  make loco-android        Fetch $(LOCO_SO) (local $(LOCAL_LOCO_BIN) if present, else $(BIGFRED_OCI_IMAGE):$(BIGFRED_OCI_TAG); FORCE=1)"
 	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release (skip if exists; FORCE=1)"
 	@echo "  make supervisord-android Fetch supervisord libs from $(SUPERVISORD_REPO) latest release (skip if exists; FORCE=1)"
 	@echo "  make clean               Clean Gradle build outputs"
@@ -78,8 +79,16 @@ endif
 
 loco-android: $(LOCO_SO)
 
+ifneq ($(wildcard $(LOCAL_LOCO_BIN)),)
+$(LOCO_SO): $(LOCAL_LOCO_BIN)
+	@mkdir -p "$(NATIVE_PREBUILT)"
+	@cp "$<" "$@"
+	@echo "Using local $< → $@"
+else
 $(LOCO_SO):
+	@mkdir -p "$(NATIVE_PREBUILT)"
 	./scripts/fetch-ghcr-oras.sh "$(BIGFRED_OCI_IMAGE)" "$(BIGFRED_OCI_TAG)" "$@" main
+endif
 
 valkey-android: $(VALKEY_SO)
 
