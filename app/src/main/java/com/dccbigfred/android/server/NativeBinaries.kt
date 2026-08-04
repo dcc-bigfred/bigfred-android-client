@@ -8,8 +8,7 @@ import java.io.File
 object NativeBinaries {
     const val LOCO_SERVER = "libloco-server.so"
     const val VALKEY = "libvalkey-server.so"
-    const val SUPERVISORD = "libsupervisord.so"
-    const val SUPERVISORCTL = "libsupervisorctl.so"
+    const val MICROINIT = "libmicroinit.so"
 
     fun dir(context: Context): File =
         File(context.applicationInfo.nativeLibraryDir)

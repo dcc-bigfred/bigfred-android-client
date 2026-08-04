@@ -27,13 +27,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 
 /**
- * Foreground service hosting Valkey + loco-server for "BigFred on phone".
- * Stage 1 uses `--no-supervisor`; stage 2 passes absolute jniLibs paths for supervisord.
+ * Foreground service hosting loco-server and its microinit-managed children for "BigFred on phone".
  */
 class LocoServerService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
-    private var valkeyProcess: Process? = null
     private var locoProcess: Process? = null
     private var watchdogThread: Thread? = null
     private var bootThread: Thread? = null
@@ -147,8 +145,7 @@ class LocoServerService : Service() {
         paths.ensureDirs()
 
         ProcessOrphanReaper.reap(paths.locoServerPid, NativeBinaries.LOCO_SERVER)
-        ProcessOrphanReaper.reap(paths.valkeyPid, NativeBinaries.VALKEY)
-        ProcessOrphanReaper.reap(paths.supervisordPid, NativeBinaries.SUPERVISORD)
+        ProcessOrphanReaper.reap(paths.microinitPid, NativeBinaries.MICROINIT)
         ensureBootActive()
 
         if (ProcessOrphanReaper.isPortOpen("127.0.0.1", HTTP_PORT) &&
@@ -161,9 +158,7 @@ class LocoServerService : Service() {
 
         val locoBin = NativeBinaries.require(this, NativeBinaries.LOCO_SERVER)
         val valkeyBin = NativeBinaries.require(this, NativeBinaries.VALKEY)
-        val supervisordBin = NativeBinaries.file(this, NativeBinaries.SUPERVISORD)
-        val supervisorctlBin = NativeBinaries.file(this, NativeBinaries.SUPERVISORCTL)
-        val supervised = supervisordBin.isFile && supervisorctlBin.isFile
+        val microinitBin = NativeBinaries.require(this, NativeBinaries.MICROINIT)
 
         val prefs = (application as BigFredApplication).serverPreferences
         val jwt = runBlocking { prefs.getOrCreateLocalJwtSecret() }
@@ -175,15 +170,6 @@ class LocoServerService : Service() {
             env["BIGFRED_LAN_PREFIX"] = prefix
             Log.i(TAG, "BIGFRED_LAN_PREFIX=$prefix (for dcc-bus scan --lan-prefix)")
         }
-        if (supervised) {
-            // Shim resolves sibling libsupervisord.so; also set env for clarity.
-            env["SUPERVISORD_BIN"] = supervisordBin.absolutePath
-        }
-
-        if (!supervised) {
-            // Stage 1: FGS owns Valkey; loco-server runs without supervisord.
-            bootUnmanagedValkey(paths, valkeyBin)
-        }
 
         ensureBootActive()
         val locoLog = File(paths.logsDir, "loco-server.log")
@@ -193,20 +179,10 @@ class LocoServerService : Service() {
             "--db", paths.dbFile.absolutePath,
             "--redis-bin", valkeyBin.absolutePath,
             "--redis-addr", "127.0.0.1:$REDIS_PORT",
+            "--microinit-bin", microinitBin.absolutePath,
+            "--microinit-socket", paths.microinitSocket.absolutePath,
             "--mdns=false",
         )
-        if (supervised) {
-            // Stage 2: loco-server owns supervisord → Valkey + dcc-bus.
-            // Execute from nativeLibraryDir (executable); never copy to code_cache (noexec).
-            locoArgs += listOf(
-                "--supervisord-bin", supervisordBin.absolutePath,
-                "--supervisorctl-bin", supervisorctlBin.absolutePath,
-            )
-            Log.i(TAG, "starting supervised local mode (jniLibs supervisord)")
-        } else {
-            locoArgs += listOf("--redis-external", "--no-supervisor")
-            Log.i(TAG, "starting unmanaged local mode (--no-supervisor)")
-        }
 
         locoProcess = ProcessBuilder(locoArgs)
             .directory(paths.dataDir)
@@ -226,42 +202,13 @@ class LocoServerService : Service() {
         }
         running.set(true)
         _state.value = LocalServerState.Running(LOCAL_BASE_URL)
-        startWatchdog(supervised)
-    }
-
-    private fun bootUnmanagedValkey(paths: LocalServerPaths, valkeyBin: File) {
-        ensureBootActive()
-        val valkeyLog = File(paths.logsDir, "valkey.log")
-        valkeyProcess = ProcessBuilder(
-            valkeyBin.absolutePath,
-            "--bind", "127.0.0.1",
-            "--port", REDIS_PORT.toString(),
-            "--dir", paths.redisDir.absolutePath,
-            "--save", "",
-            "--appendonly", "no",
-            "--protected-mode", "no",
-            "--daemonize", "no",
-        ).redirectErrorStream(true)
-            .redirectOutput(ProcessBuilder.Redirect.appendTo(valkeyLog))
-            .start()
-        ensureBootActive()
-        ProcessOrphanReaper.writePid(paths.valkeyPid, processPid(valkeyProcess!!))
-        waitForPort("127.0.0.1", REDIS_PORT, 15_000)
+        startWatchdog()
     }
 
     private fun ensureBootActive() {
         if (Thread.currentThread().isInterrupted || !booting.get()) {
             throw InterruptedException("local server boot cancelled")
         }
-    }
-
-    private fun waitForPort(host: String, port: Int, timeoutMs: Long) {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            if (ProcessOrphanReaper.isPortOpen(host, port)) return
-            Thread.sleep(200)
-        }
-        throw IllegalStateException("Timeout waiting for $host:$port")
     }
 
     private fun waitForHttpReady(timeoutMs: Long) {
@@ -275,16 +222,15 @@ class LocoServerService : Service() {
         throw IllegalStateException("Timeout waiting for $LOCAL_BASE_URL")
     }
 
-    private fun startWatchdog(supervised: Boolean) {
+    private fun startWatchdog() {
         watchdogThread?.interrupt()
         watchdogThread = thread(name = "loco-server-watchdog", isDaemon = true) {
             while (running.get() && !Thread.currentThread().isInterrupted) {
                 try {
                     Thread.sleep(3_000)
                     val locoAlive = locoProcess?.isAlive == true
-                    val valkeyOk = supervised || valkeyProcess?.isAlive == true
-                    if (!locoAlive || !valkeyOk) {
-                        Log.w(TAG, "child died loco=$locoAlive valkeyOk=$valkeyOk — restarting")
+                    if (!locoAlive) {
+                        Log.w(TAG, "loco-server died — restarting")
                         cleanupChildren()
                         running.set(false)
                         if (!booting.compareAndSet(false, true)) {
@@ -328,8 +274,7 @@ class LocoServerService : Service() {
 
     @Synchronized
     private fun cleanupChildren() {
-        listOf(locoProcess, valkeyProcess).forEach { proc ->
-            proc ?: return@forEach
+        locoProcess?.let { proc ->
             try {
                 proc.destroy()
                 if (!proc.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -339,12 +284,10 @@ class LocoServerService : Service() {
             }
         }
         locoProcess = null
-        valkeyProcess = null
         try {
             val paths = LocalServerPaths.from(this)
             paths.locoServerPid.delete()
-            paths.valkeyPid.delete()
-            paths.supervisordPid.delete()
+            paths.microinitPid.delete()
         } catch (_: Exception) {
         }
     }

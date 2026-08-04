@@ -7,7 +7,7 @@
 #   make import-models — fetch hydrus.pl catalog into assets/models/
 #   make loco-android      — download libloco-server.so from GHCR (ORAS)
 #   make valkey-android    — download libvalkey-server.so from deps-android-valkey latest release
-#   make supervisord-android — download supervisord libs from deps-android-supervisord latest release
+#   make microinit-android — download libmicroinit.so from GHCR (ORAS)
 
 GRADLE ?= ./gradlew
 GRADLE_FLAGS ?= --quiet
@@ -24,17 +24,17 @@ NATIVE_PREBUILT := native-prebuilt/arm64-v8a
 LOCO_SO         := $(NATIVE_PREBUILT)/libloco-server.so
 LOCAL_LOCO_BIN  := ../bigfred/bin/loco-server-android-arm64
 VALKEY_SO       := $(NATIVE_PREBUILT)/libvalkey-server.so
-SUPERVISORD_SO  := $(NATIVE_PREBUILT)/libsupervisord.so
-SUPERVISORCTL_SO := $(NATIVE_PREBUILT)/libsupervisorctl.so
+MICROINIT_SO    := $(NATIVE_PREBUILT)/libmicroinit.so
 
 BIGFRED_OCI_IMAGE ?= ghcr.io/dcc-bigfred/loco-server-android-arm64
 BIGFRED_OCI_TAG   ?= main
+MICROINIT_OCI_IMAGE ?= ghcr.io/dcc-bigfred/microinit-android-arm64
+MICROINIT_OCI_TAG   ?= main
 
 VALKEY_REPO      ?= dcc-bigfred/deps-android-valkey
-SUPERVISORD_REPO ?= dcc-bigfred/deps-android-supervisord
 
 .PHONY: help apk release test test-android debug clean import-models \
-	loco-android valkey-android supervisord-android native-prebuilt
+	loco-android valkey-android microinit-android native-prebuilt
 
 help:
 	@echo "Targets:"
@@ -46,7 +46,7 @@ help:
 	@echo "  make import-models       Import hydrus models DB + thumbs → $(ASSETS_MODELS)"
 	@echo "  make loco-android        Fetch $(LOCO_SO) (local $(LOCAL_LOCO_BIN) if present, else $(BIGFRED_OCI_IMAGE):$(BIGFRED_OCI_TAG); FORCE=1)"
 	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release (skip if exists; FORCE=1)"
-	@echo "  make supervisord-android Fetch supervisord libs from $(SUPERVISORD_REPO) latest release (skip if exists; FORCE=1)"
+	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from $(MICROINIT_OCI_IMAGE):$(MICROINIT_OCI_TAG) (skip if exists; FORCE=1)"
 	@echo "  make clean               Clean Gradle build outputs"
 	@echo ""
 	@echo "Release signing (optional; falls back to debug keystore):"
@@ -71,10 +71,10 @@ import-models:
 ifdef FORCE
 .PHONY: force-clean-native
 force-clean-native:
-	rm -f "$(LOCO_SO)" "$(VALKEY_SO)" "$(SUPERVISORD_SO)" "$(SUPERVISORCTL_SO)"
+	rm -f "$(LOCO_SO)" "$(VALKEY_SO)" "$(MICROINIT_SO)"
 loco-android: force-clean-native
 valkey-android: force-clean-native
-supervisord-android: force-clean-native
+microinit-android: force-clean-native
 endif
 
 loco-android: $(LOCO_SO)
@@ -95,15 +95,13 @@ valkey-android: $(VALKEY_SO)
 $(VALKEY_SO):
 	./scripts/fetch-github-release-asset.sh "$(VALKEY_REPO)" libvalkey-server.so "$@"
 
-supervisord-android: $(SUPERVISORD_SO) $(SUPERVISORCTL_SO)
+microinit-android: $(MICROINIT_SO)
 
-$(SUPERVISORD_SO):
-	./scripts/fetch-github-release-asset.sh "$(SUPERVISORD_REPO)" libsupervisord.so "$@"
+$(MICROINIT_SO):
+	@mkdir -p "$(NATIVE_PREBUILT)"
+	./scripts/fetch-ghcr-oras.sh "$(MICROINIT_OCI_IMAGE)" "$(MICROINIT_OCI_TAG)" "$@" main
 
-$(SUPERVISORCTL_SO):
-	./scripts/fetch-github-release-asset.sh "$(SUPERVISORD_REPO)" libsupervisorctl.so "$@"
-
-native-prebuilt: loco-android valkey-android supervisord-android
+native-prebuilt: loco-android valkey-android microinit-android
 
 apk release: native-prebuilt
 	$(GRADLE) $(GRADLE_FLAGS) :app:assembleRelease

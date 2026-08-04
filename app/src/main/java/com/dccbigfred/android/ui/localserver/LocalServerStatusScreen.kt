@@ -68,7 +68,7 @@ fun LocalServerStatusScreen(
     }
     val logs = remember(state, logTick) {
         val dir = LocalServerPaths.from(context).logsDir
-        listOf("loco-server.log", "valkey.log", "supervisord.log")
+        listOf("loco-server.log")
             .map { File(dir, it) }
             .filter { it.isFile }
             .joinToString("\n\n") { f ->

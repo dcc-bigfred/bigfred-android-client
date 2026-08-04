@@ -156,6 +156,8 @@ val fetchNativeBinaries by tasks.registering {
     doLast {
         val outDir = jniOut.asFile
         outDir.mkdirs()
+        File(outDir, "libsupervisord.so").delete()
+        File(outDir, "libsupervisorctl.so").delete()
 
         fun githubToken(): String? =
             System.getenv("BIGFRED_NATIVE_TOKEN")
@@ -214,21 +216,11 @@ val fetchNativeBinaries by tasks.registering {
             dest.copyTo(cache, overwrite = true)
         }
 
-        // Valkey / supervisord: prefer make-fetched native-prebuilt, else latest GitHub release.
+        // Valkey: prefer make-fetched native-prebuilt, else latest GitHub release.
         stageOrFetch(
             "libvalkey-server.so",
             "depsAndroidValkeyRepo",
             "dcc-bigfred/deps-android-valkey",
-        )
-        stageOrFetch(
-            "libsupervisord.so",
-            "depsAndroidSupervisordRepo",
-            "dcc-bigfred/deps-android-supervisord",
-        )
-        stageOrFetch(
-            "libsupervisorctl.so",
-            "depsAndroidSupervisordRepo",
-            "dcc-bigfred/deps-android-supervisord",
         )
 
         // loco-server: local ../bigfred/bin → native-prebuilt → GHCR (ORAS).
@@ -255,6 +247,31 @@ val fetchNativeBinaries by tasks.registering {
                 "libloco-server.so missing after fetch. " +
                     "Build with 'make -C ../bigfred android', place it in native-prebuilt/arm64-v8a/, " +
                     "or pull from ghcr.io/dcc-bigfred/loco-server-android-arm64 (ORAS).",
+            )
+        }
+
+        // microinit: native-prebuilt → GHCR (ORAS).
+        val microinitDest = File(outDir, "libmicroinit.so")
+        val microinitCached = prebuilt.file("libmicroinit.so").asFile
+        when {
+            microinitCached.isFile -> {
+                microinitCached.copyTo(microinitDest, overwrite = true)
+                println("Staged libmicroinit.so from ${microinitCached.absolutePath}")
+            }
+            else -> {
+                val image = System.getenv("MICROINIT_OCI_IMAGE")
+                    ?: "ghcr.io/dcc-bigfred/microinit-android-arm64"
+                val tag = System.getenv("MICROINIT_OCI_TAG") ?: "main"
+                runScript(ghcrScript.asFile, image, tag, microinitDest.absolutePath, "main")
+                microinitCached.parentFile.mkdirs()
+                microinitDest.copyTo(microinitCached, overwrite = true)
+            }
+        }
+        if (!microinitDest.isFile || microinitDest.length() < 1024) {
+            throw GradleException(
+                "libmicroinit.so missing after fetch. " +
+                    "Place it in native-prebuilt/arm64-v8a/ or pull from " +
+                    "ghcr.io/dcc-bigfred/microinit-android-arm64 (ORAS).",
             )
         }
     }
