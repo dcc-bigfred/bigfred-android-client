@@ -10,11 +10,11 @@ data class LocalServerPaths(
     val etcDir: File get() = File(dataDir, "etc")
     val runDir: File get() = File(dataDir, "run")
     val logsDir: File get() = File(dataDir, "logs")
-    val redisDir: File get() = File(dataDir, "redis")
+    val redisDir: File get() = File(dataDir, "var/lib/redis")
 
     val locoServerPid: File get() = File(runDir, "loco-server.pid")
-    val valkeyPid: File get() = File(runDir, "valkey.pid")
-    val supervisordPid: File get() = File(runDir, "supervisord.pid")
+    val microinitSocket: File get() = File(runDir, "microinit.sock")
+    val microinitPid: File get() = File(runDir, "microinit.pid")
     val dbFile: File get() = File(dataDir, "bigfred.db")
 
     fun ensureDirs() {

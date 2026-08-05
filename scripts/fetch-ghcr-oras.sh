@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull loco-server-android-arm64 from GHCR (ORAS) and write libloco-server.so.
+# Pull a single-file native binary artifact from GHCR (ORAS).
 # Usage: fetch-ghcr-oras.sh <image> <tag> <output-path> [fallback-tag ...]
 #
 # Auth (optional; needed for private packages):
@@ -44,15 +44,27 @@ if ! pull_tag "${TAG}"; then
   fi
 fi
 
-src="${tmpdir}/loco-server-android-arm64"
+# Prefer a file matching the requested lib*.so output (for example,
+# libmicroinit.so → microinit-android-arm64), then retain the historical
+# loco-server name and finally accept a single-file artifact.
+output_name="$(basename "${OUT}")"
+binary_name="${output_name#lib}"
+binary_name="${binary_name%.so}"
+src="${tmpdir}/${output_name}"
 if [[ ! -f "${src}" ]]; then
-  mapfile -t files < <(find "${tmpdir}" -type f ! -name 'manifest.json' ! -name 'config.json')
-  if [[ ${#files[@]} -eq 1 ]]; then
-    src="${files[0]}"
-  else
-    echo "error: expected loco-server-android-arm64 in OCI artifact, found:" >&2
-    find "${tmpdir}" -type f >&2
-    exit 1
+  src="${tmpdir}/${binary_name}-android-arm64"
+fi
+if [[ ! -f "${src}" ]]; then
+  src="${tmpdir}/loco-server-android-arm64"
+  if [[ ! -f "${src}" ]]; then
+    mapfile -t files < <(find "${tmpdir}" -type f ! -name 'manifest.json' ! -name 'config.json')
+    if [[ ${#files[@]} -eq 1 ]]; then
+      src="${files[0]}"
+    else
+      echo "error: could not identify executable for ${output_name}; found:" >&2
+      find "${tmpdir}" -type f >&2
+      exit 1
+    fi
   fi
 fi
 

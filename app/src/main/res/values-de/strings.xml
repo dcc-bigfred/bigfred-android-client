@@ -160,7 +160,7 @@
     <string name="local_server_notification_channel">Lokaler BigFred-Server</string>
     <string name="local_server_notification_title">BigFred auf dem Telefon</string>
     <string name="local_server_notification_text">Tippen, um BigFred zu öffnen</string>
-    <string name="local_server_missing_binaries">Native Binärdateien fehlen. make native-prebuilt ausführen (loco-server aus GHCR + Valkey/supervisord-Releases) oder loco lokal in ../bigfred bauen.</string>
+    <string name="local_server_missing_binaries">Native Binärdateien fehlen. make native-prebuilt ausführen (loco-server/microinit aus GHCR + Valkey-Release) oder loco lokal in ../bigfred bauen.</string>
 
     <!-- Settings -->
     <string name="settings_title">Einstellungen</string>

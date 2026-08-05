@@ -17,8 +17,18 @@ class ProcessOrphanReaperTest {
     fun writeAndReadPid_roundTrip() {
         val f = File.createTempFile("pid", ".txt")
         f.deleteOnExit()
-        ProcessOrphanReaper.writePid(f, 4242)
+        ProcessOrphanReaper.writePidIdentity(f, 4242, 99L)
         assertTrue(ProcessOrphanReaper.readPid(f) == 4242)
+        val id = ProcessOrphanReaper.readPidIdentity(f)!!
+        assertTrue(id.pid == 4242)
+        assertTrue(id.starttime == 99L)
+    }
+
+    @Test
+    fun matchesIdentity_rejectsStarttimeMismatch() {
+        val fake = ProcessOrphanReaper.PidIdentity(pid = 1, starttime = 1L)
+        // PID 1 is alive on Linux/Android hosts used for unit tests, but starttime won't match 1.
+        assertFalse(ProcessOrphanReaper.matchesIdentity(fake, "init"))
     }
 
     @Test

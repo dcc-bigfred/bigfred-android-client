@@ -87,11 +87,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BIGFRED_OCI_TAG: ${{ vars.BIGFRED_OCI_TAG }}
+          MICROINIT_OCI_TAG: ${{ vars.MICROINIT_OCI_TAG }}
         run: |
           set -euo pipefail
-          TAG="${BIGFRED_OCI_TAG:-main}"
-          echo "Using loco-server OCI tag: ${TAG}"
-          make native-prebuilt BIGFRED_OCI_TAG="${TAG}"
+          LOCO_TAG="${BIGFRED_OCI_TAG:-main}"
+          MICROINIT_TAG="${MICROINIT_OCI_TAG:-main}"
+          echo "Using loco-server OCI tag: ${LOCO_TAG}"
+          echo "Using microinit OCI tag: ${MICROINIT_TAG}"
+          make native-prebuilt BIGFRED_OCI_TAG="${LOCO_TAG}" MICROINIT_OCI_TAG="${MICROINIT_TAG}"
           ls -lh native-prebuilt/arm64-v8a/
 
       - name: Resolve app version
@@ -126,7 +129,7 @@ jobs:
           APK="app/build/outputs/apk/release/app-release.apk"
           unzip -l "$APK" | grep -E 'lib/arm64-v8a/libloco-server\.so' 
           unzip -l "$APK" | grep -E 'lib/arm64-v8a/libvalkey-server\.so'
-          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libsupervisord\.so'
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libmicroinit\.so'
 
       - name: Verify APK version metadata
         run: |
