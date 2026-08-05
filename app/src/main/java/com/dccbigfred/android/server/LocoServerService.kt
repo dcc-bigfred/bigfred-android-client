@@ -274,20 +274,32 @@ class LocoServerService : Service() {
 
     @Synchronized
     private fun cleanupChildren() {
+        val paths = LocalServerPaths.from(this)
         locoProcess?.let { proc ->
             try {
+                // SIGTERM loco-server first; its own shutdown defer forwards a
+                // soft-kill (SIGTERM) to microinit via the SDK. Give it a
+                // generous window so the managed services (redis/alloy/dcc-bus)
+                // can flush before loco-server is force-killed.
                 proc.destroy()
-                if (!proc.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
+                if (!proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) {
                     proc.destroyForcibly()
                 }
             } catch (_: Exception) {
             }
         }
         locoProcess = null
+        // Belt-and-suspenders: if loco-server was hard-killed before its
+        // graceful shutdown completed, microinit could be orphaned. Send it
+        // a SIGTERM directly (10s grace then SIGKILL) so its managed services
+        // still get a chance to stop cleanly.
         try {
-            val paths = LocalServerPaths.from(this)
+            ProcessOrphanReaper.stopGracefully(paths.microinitPid, NativeBinaries.MICROINIT, 10_000)
+        } catch (e: Exception) {
+            Log.w(TAG, "microinit graceful stop failed", e)
+        }
+        try {
             paths.locoServerPid.delete()
-            paths.microinitPid.delete()
         } catch (_: Exception) {
         }
     }

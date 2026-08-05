@@ -13,13 +13,24 @@ import java.net.Socket
 object ProcessOrphanReaper {
 
     fun reap(pidFile: File, cmdlineNeedle: String) {
+        stopGracefully(pidFile, cmdlineNeedle, graceMs = 3_000)
+    }
+
+    /**
+     * SIGTERM the process backing [pidFile] (after verifying /proc/<pid>/cmdline
+     * contains [cmdlineNeedle] to guard against PID reuse), wait up to [graceMs]
+     * for it to exit, then SIGKILL. The pidfile is deleted once the process is
+     * gone. Used so microinit receives a graceful SIGTERM and can stop its
+     * managed services before being force-killed.
+     */
+    fun stopGracefully(pidFile: File, cmdlineNeedle: String, graceMs: Long) {
         val pid = readPid(pidFile) ?: return
         if (!cmdlineMatches(pid, cmdlineNeedle)) {
             pidFile.delete()
             return
         }
         signal(pid, OsConstants.SIGTERM)
-        val deadline = System.currentTimeMillis() + 3_000
+        val deadline = System.currentTimeMillis() + graceMs
         while (System.currentTimeMillis() < deadline) {
             if (!isAlive(pid)) break
             Thread.sleep(100)
