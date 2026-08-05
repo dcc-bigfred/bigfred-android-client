@@ -280,9 +280,10 @@ class LocoServerService : Service() {
                 // SIGTERM loco-server first; its own shutdown defer forwards a
                 // soft-kill (SIGTERM) to microinit via the SDK. Give it a
                 // generous window so the managed services (redis/alloy/dcc-bus)
-                // can flush before loco-server is force-killed.
+                // can flush before loco-server is force-killed. Match the 15s
+                // microinit/SDK shutdown budget.
                 proc.destroy()
-                if (!proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                if (!proc.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)) {
                     proc.destroyForcibly()
                 }
             } catch (_: Exception) {
@@ -291,10 +292,11 @@ class LocoServerService : Service() {
         locoProcess = null
         // Belt-and-suspenders: if loco-server was hard-killed before its
         // graceful shutdown completed, microinit could be orphaned. Send it
-        // a SIGTERM directly (10s grace then SIGKILL) so its managed services
-        // still get a chance to stop cleanly.
+        // a SIGTERM directly (15s grace then SIGKILL) so its managed services
+        // still get a chance to stop cleanly. Relies on microinit writing
+        // run/microinit.pid (pid + starttime) via the Go supervise Host.
         try {
-            ProcessOrphanReaper.stopGracefully(paths.microinitPid, NativeBinaries.MICROINIT, 10_000)
+            ProcessOrphanReaper.stopGracefully(paths.microinitPid, NativeBinaries.MICROINIT, 15_000)
         } catch (e: Exception) {
             Log.w(TAG, "microinit graceful stop failed", e)
         }
