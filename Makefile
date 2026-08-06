@@ -5,9 +5,9 @@
 #   make debug   — debug APK
 #   make clean   — remove build outputs
 #   make import-models — fetch hydrus.pl catalog into assets/models/
-#   make loco-android      — download libloco-server.so from GHCR (ORAS)
-#   make valkey-android    — download libvalkey-server.so from deps-android-valkey latest release
-#   make microinit-android — download libmicroinit.so from GHCR (ORAS)
+#   make loco-android      — download libloco-server.so (GitHub tip/Release)
+#   make valkey-android    — download libvalkey-server.so from deps-android-valkey
+#   make microinit-android — download libmicroinit.so (GitHub tip/Release)
 
 GRADLE ?= ./gradlew
 GRADLE_FLAGS ?= --quiet
@@ -26,34 +26,27 @@ LOCAL_LOCO_BIN  := ../bigfred/bin/loco-server-android-arm64
 VALKEY_SO       := $(NATIVE_PREBUILT)/libvalkey-server.so
 MICROINIT_SO    := $(NATIVE_PREBUILT)/libmicroinit.so
 
-BIGFRED_OCI_IMAGE ?= ghcr.io/dcc-bigfred/loco-server-android-arm64
-BIGFRED_OCI_TAG   ?= main
-MICROINIT_OCI_IMAGE ?= ghcr.io/dcc-bigfred/microinit-android-arm64
-MICROINIT_OCI_TAG   ?= main
+BIGFRED_REF    ?= main
+MICROINIT_REF  ?= main
+VALKEY_REPO    ?= dcc-bigfred/deps-android-valkey
 
-VALKEY_REPO      ?= dcc-bigfred/deps-android-valkey
+CI_SCRIPTS_REPO ?= https://github.com/dcc-bigfred/.github.git
+CI_SCRIPTS_REF  ?= v2
+CI_SCRIPTS_DIR  ?= .ci-github
 
 .PHONY: help apk release test test-android debug clean import-models \
-	loco-android valkey-android microinit-android native-prebuilt
+	loco-android valkey-android microinit-android native-prebuilt \
+	ci-scripts ci-scripts-update
 
 help:
 	@echo "Targets:"
 	@echo "  make apk                 Build signed release APK → $(APK_RELEASE)"
-	@echo "  make release             Alias for apk"
-	@echo "  make test                Run JVM unit tests"
-	@echo "  make test-android        Run instrumented tests (device/emulator required)"
-	@echo "  make debug               Build debug APK → $(APK_DEBUG)"
-	@echo "  make import-models       Import hydrus models DB + thumbs → $(ASSETS_MODELS)"
-	@echo "  make loco-android        Fetch $(LOCO_SO) (local $(LOCAL_LOCO_BIN) if present, else $(BIGFRED_OCI_IMAGE):$(BIGFRED_OCI_TAG); FORCE=1)"
-	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release (skip if exists; FORCE=1)"
-	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from $(MICROINIT_OCI_IMAGE):$(MICROINIT_OCI_TAG) (skip if exists; FORCE=1)"
-	@echo "  make clean               Clean Gradle build outputs"
+	@echo "  make loco-android        Fetch $(LOCO_SO) (local bin or GitHub $(BIGFRED_REF))"
+	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release"
+	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from GitHub $(MICROINIT_REF)"
+	@echo "  make ci-scripts          Clone dcc-bigfred/.github @ $(CI_SCRIPTS_REF)"
 	@echo ""
-	@echo "Release signing (optional; falls back to debug keystore):"
-	@echo "  BIGFRED_STORE_FILE / BIGFRED_STORE_PASSWORD"
-	@echo "  BIGFRED_KEY_ALIAS  / BIGFRED_KEY_PASSWORD"
-	@echo ""
-	@echo "Private GitHub deps (optional): GITHUB_TOKEN / GH_TOKEN / BIGFRED_NATIVE_TOKEN"
+	@echo "Tip refs need GITHUB_TOKEN / GH_TOKEN / BIGFRED_NATIVE_TOKEN"
 
 import-models:
 	$(PYTHON) "$(IMPORT_SCRIPT)" --out "$(IMPORT_OUT)"
@@ -62,11 +55,19 @@ import-models:
 	rm -rf "$(ASSETS_MODELS)/images"
 	cp -a "$(IMPORT_OUT)/images" "$(ASSETS_MODELS)/images"
 	@echo "Assets ready: $(ASSETS_MODELS)"
-	@ls -lh "$(ASSETS_MODELS)/models.db"
-	@echo "Images: $$(find "$(ASSETS_MODELS)/images" -type f | wc -l)"
 
-# --- Native prebuilts (download from deps-* GitHub Releases) -----------------
-# Thin Make rules: skip when the output exists. FORCE=1 removes first.
+$(CI_SCRIPTS_DIR)/.ok:
+	@echo "Cloning $(CI_SCRIPTS_REPO) @ $(CI_SCRIPTS_REF) → $(CI_SCRIPTS_DIR)"
+	@rm -rf "$(CI_SCRIPTS_DIR)"
+	@git clone --depth 1 --branch "$(CI_SCRIPTS_REF)" "$(CI_SCRIPTS_REPO)" "$(CI_SCRIPTS_DIR)" \
+		|| { echo "error: failed to clone $(CI_SCRIPTS_REPO) @ $(CI_SCRIPTS_REF)"; exit 1; }
+	@touch "$@"
+
+ci-scripts: $(CI_SCRIPTS_DIR)/.ok
+
+ci-scripts-update:
+	rm -rf "$(CI_SCRIPTS_DIR)"
+	$(MAKE) "$(CI_SCRIPTS_DIR)/.ok"
 
 ifdef FORCE
 .PHONY: force-clean-native
@@ -85,9 +86,17 @@ $(LOCO_SO): $(LOCAL_LOCO_BIN)
 	@cp "$<" "$@"
 	@echo "Using local $< → $@"
 else
-$(LOCO_SO):
+$(LOCO_SO): $(CI_SCRIPTS_DIR)/.ok
 	@mkdir -p "$(NATIVE_PREBUILT)"
-	./scripts/fetch-ghcr-oras.sh "$(BIGFRED_OCI_IMAGE)" "$(BIGFRED_OCI_TAG)" "$@" main
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	GITHUB_REPO=dcc-bigfred/bigfred \
+	ARTIFACT_NAME=binaries \
+	FILES=loco-server-android-arm64:bin/libloco-server.so \
+		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(BIGFRED_REF)" "$$tmpdir/out.tar"; \
+	tar -xOf "$$tmpdir/out.tar" bin/libloco-server.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 endif
 
 valkey-android: $(VALKEY_SO)
@@ -97,9 +106,17 @@ $(VALKEY_SO):
 
 microinit-android: $(MICROINIT_SO)
 
-$(MICROINIT_SO):
+$(MICROINIT_SO): $(CI_SCRIPTS_DIR)/.ok
 	@mkdir -p "$(NATIVE_PREBUILT)"
-	./scripts/fetch-ghcr-oras.sh "$(MICROINIT_OCI_IMAGE)" "$(MICROINIT_OCI_TAG)" "$@" main
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	GITHUB_REPO=dcc-bigfred/microinit \
+	ARTIFACT_NAME=binaries-android-arm64 \
+	FILES=libmicroinit.so:bin/libmicroinit.so \
+		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(MICROINIT_REF)" "$$tmpdir/out.tar"; \
+	tar -xOf "$$tmpdir/out.tar" bin/libmicroinit.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 
 native-prebuilt: loco-android valkey-android microinit-android
 

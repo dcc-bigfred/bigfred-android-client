@@ -38,6 +38,7 @@ app/src/main/assets/models/
 tools/hydrus-import/out/
 tools/hydrus-import/__pycache__/
 
-# Native prebuilts (GHCR + deps-android-* GitHub Releases) and staged jniLibs
+# Native prebuilts (GitHub tip/Releases) and staged jniLibs
 native-prebuilt/
 app/src/main/jniLibs/
+.ci-github/

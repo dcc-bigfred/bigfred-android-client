@@ -151,7 +151,6 @@ val fetchNativeBinaries by tasks.registering {
     val localLoco = rootProject.layout.projectDirectory.dir("../bigfred/bin")
         .file("loco-server-android-arm64")
     val fetchScript = rootProject.layout.projectDirectory.file("scripts/fetch-github-release-asset.sh")
-    val ghcrScript = rootProject.layout.projectDirectory.file("scripts/fetch-ghcr-oras.sh")
     outputs.dir(jniOut)
     doLast {
         val outDir = jniOut.asFile
@@ -187,20 +186,26 @@ val fetchNativeBinaries by tasks.registering {
             }
         }
 
-        fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {
-            runScript(fetchScript.asFile, repo, assetName, dest.absolutePath)
+        fun runMake(vararg targets: String) {
+            val pb = ProcessBuilder(listOf("make", *targets))
+            pb.directory(rootProject.projectDir)
+            pb.redirectErrorStream(true)
+            val env = pb.environment()
+            githubToken()?.let {
+                env["GITHUB_TOKEN"] = it
+                env["GH_TOKEN"] = it
+            }
+            val proc = pb.start()
+            val output = proc.inputStream.bufferedReader().readText()
+            val code = proc.waitFor()
+            print(output)
+            if (code != 0) {
+                throw GradleException("make ${targets.joinToString(" ")} failed (exit $code)")
+            }
         }
 
-        fun fetchLocoFromGhcr(dest: File) {
-            val image = (project.findProperty("bigfredOciImage") as String?)
-                ?.ifBlank { null }
-                ?: System.getenv("BIGFRED_OCI_IMAGE")
-                ?: "ghcr.io/dcc-bigfred/loco-server-android-arm64"
-            val tag = (project.findProperty("bigfredOciTag") as String?)
-                ?.ifBlank { null }
-                ?: System.getenv("BIGFRED_OCI_TAG")
-                ?: "main"
-            runScript(ghcrScript.asFile, image, tag, dest.absolutePath, "main")
+        fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {
+            runScript(fetchScript.asFile, repo, assetName, dest.absolutePath)
         }
 
         fun stageOrFetch(prebuiltName: String, repoProp: String, defaultRepo: String) {
@@ -210,7 +215,6 @@ val fetchNativeBinaries by tasks.registering {
                 ?.ifBlank { null }
                 ?: defaultRepo
             fetchLatestReleaseAsset(repo, prebuiltName, dest)
-            // Keep native-prebuilt in sync for make skip-if-exists.
             val cache = prebuilt.file(prebuiltName).asFile
             cache.parentFile.mkdirs()
             dest.copyTo(cache, overwrite = true)
@@ -223,7 +227,7 @@ val fetchNativeBinaries by tasks.registering {
             "dcc-bigfred/deps-android-valkey",
         )
 
-        // loco-server: local ../bigfred/bin → native-prebuilt → GHCR (ORAS).
+        // loco-server: local ../bigfred/bin → native-prebuilt → make loco-android (GitHub).
         val locoDest = File(outDir, "libloco-server.so")
         val locoCached = prebuilt.file("libloco-server.so").asFile
         when {
@@ -236,21 +240,20 @@ val fetchNativeBinaries by tasks.registering {
                 println("Staged libloco-server.so from ${locoCached.absolutePath}")
             }
             else -> {
-                fetchLocoFromGhcr(locoDest)
-                locoDest.parentFile.mkdirs()
-                locoCached.parentFile.mkdirs()
-                locoDest.copyTo(locoCached, overwrite = true)
+                runMake("loco-android")
+                require(locoCached.isFile) { "make loco-android did not produce ${locoCached}" }
+                locoCached.copyTo(locoDest, overwrite = true)
             }
         }
         if (!locoDest.isFile || locoDest.length() < 1024) {
             throw GradleException(
                 "libloco-server.so missing after fetch. " +
                     "Build with 'make -C ../bigfred android', place it in native-prebuilt/arm64-v8a/, " +
-                    "or pull from ghcr.io/dcc-bigfred/loco-server-android-arm64 (ORAS).",
+                    "or set GITHUB_TOKEN and run 'make loco-android'.",
             )
         }
 
-        // microinit: native-prebuilt → GHCR (ORAS).
+        // microinit: native-prebuilt → make microinit-android (GitHub).
         val microinitDest = File(outDir, "libmicroinit.so")
         val microinitCached = prebuilt.file("libmicroinit.so").asFile
         when {
@@ -259,19 +262,18 @@ val fetchNativeBinaries by tasks.registering {
                 println("Staged libmicroinit.so from ${microinitCached.absolutePath}")
             }
             else -> {
-                val image = System.getenv("MICROINIT_OCI_IMAGE")
-                    ?: "ghcr.io/dcc-bigfred/microinit-android-arm64"
-                val tag = System.getenv("MICROINIT_OCI_TAG") ?: "main"
-                runScript(ghcrScript.asFile, image, tag, microinitDest.absolutePath, "main")
-                microinitCached.parentFile.mkdirs()
-                microinitDest.copyTo(microinitCached, overwrite = true)
+                runMake("microinit-android")
+                require(microinitCached.isFile) {
+                    "make microinit-android did not produce ${microinitCached}"
+                }
+                microinitCached.copyTo(microinitDest, overwrite = true)
             }
         }
         if (!microinitDest.isFile || microinitDest.length() < 1024) {
             throw GradleException(
                 "libmicroinit.so missing after fetch. " +
-                    "Place it in native-prebuilt/arm64-v8a/ or pull from " +
-                    "ghcr.io/dcc-bigfred/microinit-android-arm64 (ORAS).",
+                    "Place it in native-prebuilt/arm64-v8a/ or set GITHUB_TOKEN and " +
+                    "run 'make microinit-android'.",
             )
         }
     }
