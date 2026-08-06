@@ -170,24 +170,12 @@ val fetchNativeBinaries by tasks.registering {
             return true
         }
 
-        fun runScript(script: File, vararg args: String) {
-            require(script.isFile) { "Missing script: ${script.absolutePath}" }
-            val pb = ProcessBuilder(listOf(script.absolutePath, *args))
-            pb.directory(rootProject.projectDir)
-            pb.redirectErrorStream(true)
-            val env = pb.environment()
-            githubToken()?.let { env["GITHUB_TOKEN"] = it }
-            val proc = pb.start()
-            val output = proc.inputStream.bufferedReader().readText()
-            val code = proc.waitFor()
-            print(output)
-            if (code != 0) {
-                throw GradleException("Script ${script.name} failed (exit $code)")
-            }
-        }
-
-        fun runMake(vararg targets: String) {
-            val pb = ProcessBuilder(listOf("make", *targets))
+        fun runProcess(
+            command: List<String>,
+            label: String,
+            extraEnv: Map<String, String> = emptyMap(),
+        ) {
+            val pb = ProcessBuilder(command)
             pb.directory(rootProject.projectDir)
             pb.redirectErrorStream(true)
             val env = pb.environment()
@@ -195,13 +183,26 @@ val fetchNativeBinaries by tasks.registering {
                 env["GITHUB_TOKEN"] = it
                 env["GH_TOKEN"] = it
             }
+            env.putAll(extraEnv)
             val proc = pb.start()
             val output = proc.inputStream.bufferedReader().readText()
             val code = proc.waitFor()
             print(output)
             if (code != 0) {
-                throw GradleException("make ${targets.joinToString(" ")} failed (exit $code)")
+                throw GradleException("$label failed (exit $code)")
             }
+        }
+
+        fun runScript(script: File, vararg args: String) {
+            require(script.isFile) { "Missing script: ${script.absolutePath}" }
+            runProcess(
+                listOf(script.absolutePath, *args),
+                "Script ${script.name}",
+            )
+        }
+
+        fun runMake(vararg targets: String) {
+            runProcess(listOf("make", *targets), "make ${targets.joinToString(" ")}")
         }
 
         fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {

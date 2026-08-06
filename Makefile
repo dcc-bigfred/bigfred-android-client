@@ -8,10 +8,14 @@
 #   make loco-android      — download libloco-server.so (GitHub tip/Release)
 #   make valkey-android    — download libvalkey-server.so from deps-android-valkey
 #   make microinit-android — download libmicroinit.so (GitHub tip/Release)
+#
+# Native tip/Release fetch: go run github.com/dcc-bigfred/common/cmd/fetch@latest
 
 GRADLE ?= ./gradlew
 GRADLE_FLAGS ?= --quiet
 PYTHON ?= python3
+FETCH_PKG ?= github.com/dcc-bigfred/common/cmd/fetch@latest
+export GOPROXY ?= direct
 
 APK_RELEASE := app/build/outputs/apk/release/app-release.apk
 APK_DEBUG   := app/build/outputs/apk/debug/app-debug.apk
@@ -30,13 +34,8 @@ BIGFRED_REF    ?= master
 MICROINIT_REF  ?= main
 VALKEY_REPO    ?= dcc-bigfred/deps-android-valkey
 
-CI_SCRIPTS_REPO ?= https://github.com/dcc-bigfred/.github.git
-CI_SCRIPTS_REF  ?= v2
-CI_SCRIPTS_DIR  ?= .ci-github
-
 .PHONY: help apk release test test-android debug clean import-models \
-	loco-android valkey-android microinit-android native-prebuilt \
-	ci-scripts ci-scripts-update
+	loco-android valkey-android microinit-android native-prebuilt
 
 help:
 	@echo "Targets:"
@@ -44,9 +43,9 @@ help:
 	@echo "  make loco-android        Fetch $(LOCO_SO) (local bin or GitHub $(BIGFRED_REF))"
 	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release"
 	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from GitHub $(MICROINIT_REF)"
-	@echo "  make ci-scripts          Clone dcc-bigfred/.github @ $(CI_SCRIPTS_REF)"
 	@echo ""
 	@echo "Tip refs need GITHUB_TOKEN / GH_TOKEN / BIGFRED_NATIVE_TOKEN"
+	@echo "Binary fetch: go run $(FETCH_PKG)"
 
 import-models:
 	$(PYTHON) "$(IMPORT_SCRIPT)" --out "$(IMPORT_OUT)"
@@ -55,19 +54,6 @@ import-models:
 	rm -rf "$(ASSETS_MODELS)/images"
 	cp -a "$(IMPORT_OUT)/images" "$(ASSETS_MODELS)/images"
 	@echo "Assets ready: $(ASSETS_MODELS)"
-
-$(CI_SCRIPTS_DIR)/.ok:
-	@echo "Cloning $(CI_SCRIPTS_REPO) @ $(CI_SCRIPTS_REF) → $(CI_SCRIPTS_DIR)"
-	@rm -rf "$(CI_SCRIPTS_DIR)"
-	@git clone --depth 1 --branch "$(CI_SCRIPTS_REF)" "$(CI_SCRIPTS_REPO)" "$(CI_SCRIPTS_DIR)" \
-		|| { echo "error: failed to clone $(CI_SCRIPTS_REPO) @ $(CI_SCRIPTS_REF)"; exit 1; }
-	@touch "$@"
-
-ci-scripts: $(CI_SCRIPTS_DIR)/.ok
-
-ci-scripts-update:
-	rm -rf "$(CI_SCRIPTS_DIR)"
-	$(MAKE) "$(CI_SCRIPTS_DIR)/.ok"
 
 ifdef FORCE
 .PHONY: force-clean-native
@@ -86,14 +72,16 @@ $(LOCO_SO): $(LOCAL_LOCO_BIN)
 	@cp "$<" "$@"
 	@echo "Using local $< → $@"
 else
-$(LOCO_SO): $(CI_SCRIPTS_DIR)/.ok
+$(LOCO_SO):
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
 	@mkdir -p "$(NATIVE_PREBUILT)"
 	@tmpdir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmpdir"' EXIT; \
-	GITHUB_REPO=dcc-bigfred/bigfred \
-	ARTIFACT_NAME=binaries \
-	FILES=loco-server-android-arm64:bin/libloco-server.so \
-		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(BIGFRED_REF)" "$$tmpdir/out.tar" && \
+	go run "$(FETCH_PKG)" \
+		--repo=dcc-bigfred/bigfred \
+		--artifact=binaries \
+		--files=loco-server-android-arm64:bin/libloco-server.so \
+		"$(BIGFRED_REF)" "$$tmpdir/out.tar" && \
 	tar -xOf "$$tmpdir/out.tar" bin/libloco-server.so > "$@"
 	@chmod 755 "$@"
 	@echo "Wrote $@"
@@ -106,14 +94,16 @@ $(VALKEY_SO):
 
 microinit-android: $(MICROINIT_SO)
 
-$(MICROINIT_SO): $(CI_SCRIPTS_DIR)/.ok
+$(MICROINIT_SO):
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
 	@mkdir -p "$(NATIVE_PREBUILT)"
 	@tmpdir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmpdir"' EXIT; \
-	GITHUB_REPO=dcc-bigfred/microinit \
-	ARTIFACT_NAME=binaries-android-arm64 \
-	FILES=libmicroinit.so:bin/libmicroinit.so \
-		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(MICROINIT_REF)" "$$tmpdir/out.tar" && \
+	go run "$(FETCH_PKG)" \
+		--repo=dcc-bigfred/microinit \
+		--artifact=binaries-android-arm64 \
+		--files=libmicroinit.so:bin/libmicroinit.so \
+		"$(MICROINIT_REF)" "$$tmpdir/out.tar" && \
 	tar -xOf "$$tmpdir/out.tar" bin/libmicroinit.so > "$@"
 	@chmod 755 "$@"
 	@echo "Wrote $@"
