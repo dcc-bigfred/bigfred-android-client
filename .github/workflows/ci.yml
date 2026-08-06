@@ -87,7 +87,7 @@ jobs:
           MICROINIT_REF: ${{ vars.MICROINIT_REF }}
         run: |
           set -euo pipefail
-          LOCO_REF="${BIGFRED_REF:-main}"
+          LOCO_REF="${BIGFRED_REF:-master}"
           MICROINIT_REF="${MICROINIT_REF:-main}"
           echo "Using loco-server ref: ${LOCO_REF}"
           echo "Using microinit ref: ${MICROINIT_REF}"

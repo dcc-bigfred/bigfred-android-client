@@ -26,7 +26,7 @@ LOCAL_LOCO_BIN  := ../bigfred/bin/loco-server-android-arm64
 VALKEY_SO       := $(NATIVE_PREBUILT)/libvalkey-server.so
 MICROINIT_SO    := $(NATIVE_PREBUILT)/libmicroinit.so
 
-BIGFRED_REF    ?= main
+BIGFRED_REF    ?= master
 MICROINIT_REF  ?= main
 VALKEY_REPO    ?= dcc-bigfred/deps-android-valkey
 
@@ -93,7 +93,7 @@ $(LOCO_SO): $(CI_SCRIPTS_DIR)/.ok
 	GITHUB_REPO=dcc-bigfred/bigfred \
 	ARTIFACT_NAME=binaries \
 	FILES=loco-server-android-arm64:bin/libloco-server.so \
-		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(BIGFRED_REF)" "$$tmpdir/out.tar"; \
+		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(BIGFRED_REF)" "$$tmpdir/out.tar" && \
 	tar -xOf "$$tmpdir/out.tar" bin/libloco-server.so > "$@"
 	@chmod 755 "$@"
 	@echo "Wrote $@"
@@ -113,7 +113,7 @@ $(MICROINIT_SO): $(CI_SCRIPTS_DIR)/.ok
 	GITHUB_REPO=dcc-bigfred/microinit \
 	ARTIFACT_NAME=binaries-android-arm64 \
 	FILES=libmicroinit.so:bin/libmicroinit.so \
-		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(MICROINIT_REF)" "$$tmpdir/out.tar"; \
+		"$(CI_SCRIPTS_DIR)/scripts/fetch-github-binaries.sh" "$(MICROINIT_REF)" "$$tmpdir/out.tar" && \
 	tar -xOf "$$tmpdir/out.tar" bin/libmicroinit.so > "$@"
 	@chmod 755 "$@"
 	@echo "Wrote $@"
