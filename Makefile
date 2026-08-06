@@ -90,7 +90,17 @@ endif
 valkey-android: $(VALKEY_SO)
 
 $(VALKEY_SO):
-	./scripts/fetch-github-release-asset.sh "$(VALKEY_REPO)" libvalkey-server.so "$@"
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
+	@mkdir -p "$(NATIVE_PREBUILT)"
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	go run "$(FETCH_PKG)" \
+		--repo="$(VALKEY_REPO)" \
+		--files=libvalkey-server.so:bin/libvalkey-server.so \
+		latest-release "$$tmpdir/out.tar" && \
+	tar -xOf "$$tmpdir/out.tar" bin/libvalkey-server.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 
 microinit-android: $(MICROINIT_SO)
 

@@ -150,7 +150,6 @@ val fetchNativeBinaries by tasks.registering {
     val prebuilt = rootProject.layout.projectDirectory.dir("native-prebuilt/arm64-v8a")
     val localLoco = rootProject.layout.projectDirectory.dir("../bigfred/bin")
         .file("loco-server-android-arm64")
-    val fetchScript = rootProject.layout.projectDirectory.file("scripts/fetch-github-release-asset.sh")
     outputs.dir(jniOut)
     doLast {
         val outDir = jniOut.asFile
@@ -162,13 +161,6 @@ val fetchNativeBinaries by tasks.registering {
             System.getenv("BIGFRED_NATIVE_TOKEN")
                 ?: System.getenv("GH_TOKEN")
                 ?: System.getenv("GITHUB_TOKEN")
-
-        fun copyIfExists(src: File, destName: String): Boolean {
-            if (!src.isFile) return false
-            src.copyTo(File(outDir, destName), overwrite = true)
-            println("Staged $destName from ${src.absolutePath}")
-            return true
-        }
 
         fun runProcess(
             command: List<String>,
@@ -193,40 +185,33 @@ val fetchNativeBinaries by tasks.registering {
             }
         }
 
-        fun runScript(script: File, vararg args: String) {
-            require(script.isFile) { "Missing script: ${script.absolutePath}" }
-            runProcess(
-                listOf(script.absolutePath, *args),
-                "Script ${script.name}",
-            )
-        }
-
         fun runMake(vararg targets: String) {
             runProcess(listOf("make", *targets), "make ${targets.joinToString(" ")}")
         }
 
-        fun fetchLatestReleaseAsset(repo: String, assetName: String, dest: File) {
-            runScript(fetchScript.asFile, repo, assetName, dest.absolutePath)
+        // Valkey: native-prebuilt → make valkey-android (GitHub latest-release via go fetch).
+        val valkeyDest = File(outDir, "libvalkey-server.so")
+        val valkeyCached = prebuilt.file("libvalkey-server.so").asFile
+        when {
+            valkeyCached.isFile -> {
+                valkeyCached.copyTo(valkeyDest, overwrite = true)
+                println("Staged libvalkey-server.so from ${valkeyCached.absolutePath}")
+            }
+            else -> {
+                runMake("valkey-android")
+                require(valkeyCached.isFile) {
+                    "make valkey-android did not produce ${valkeyCached}"
+                }
+                valkeyCached.copyTo(valkeyDest, overwrite = true)
+            }
         }
-
-        fun stageOrFetch(prebuiltName: String, repoProp: String, defaultRepo: String) {
-            val dest = File(outDir, prebuiltName)
-            if (copyIfExists(prebuilt.file(prebuiltName).asFile, prebuiltName)) return
-            val repo = (project.findProperty(repoProp) as String?)
-                ?.ifBlank { null }
-                ?: defaultRepo
-            fetchLatestReleaseAsset(repo, prebuiltName, dest)
-            val cache = prebuilt.file(prebuiltName).asFile
-            cache.parentFile.mkdirs()
-            dest.copyTo(cache, overwrite = true)
+        if (!valkeyDest.isFile || valkeyDest.length() < 1024) {
+            throw GradleException(
+                "libvalkey-server.so missing after fetch. " +
+                    "Place it in native-prebuilt/arm64-v8a/ or set GITHUB_TOKEN and " +
+                    "run 'make valkey-android'.",
+            )
         }
-
-        // Valkey: prefer make-fetched native-prebuilt, else latest GitHub release.
-        stageOrFetch(
-            "libvalkey-server.so",
-            "depsAndroidValkeyRepo",
-            "dcc-bigfred/deps-android-valkey",
-        )
 
         // loco-server: local ../bigfred/bin → native-prebuilt → make loco-android (GitHub).
         val locoDest = File(outDir, "libloco-server.so")
