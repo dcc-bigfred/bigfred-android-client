@@ -5,13 +5,17 @@
 #   make debug   — debug APK
 #   make clean   — remove build outputs
 #   make import-models — fetch hydrus.pl catalog into assets/models/
-#   make loco-android      — download libloco-server.so from GHCR (ORAS)
-#   make valkey-android    — download libvalkey-server.so from deps-android-valkey latest release
-#   make microinit-android — download libmicroinit.so from GHCR (ORAS)
+#   make loco-android      — download libloco-server.so (GitHub tip/Release)
+#   make valkey-android    — download libvalkey-server.so from deps-android-valkey
+#   make microinit-android — download libmicroinit.so (GitHub tip/Release)
+#
+# Native tip/Release fetch: go run github.com/dcc-bigfred/common/cmd/fetch@latest
 
 GRADLE ?= ./gradlew
 GRADLE_FLAGS ?= --quiet
 PYTHON ?= python3
+FETCH_PKG ?= github.com/dcc-bigfred/common/cmd/fetch@latest
+export GOPROXY ?= direct
 
 APK_RELEASE := app/build/outputs/apk/release/app-release.apk
 APK_DEBUG   := app/build/outputs/apk/debug/app-debug.apk
@@ -26,12 +30,9 @@ LOCAL_LOCO_BIN  := ../bigfred/bin/loco-server-android-arm64
 VALKEY_SO       := $(NATIVE_PREBUILT)/libvalkey-server.so
 MICROINIT_SO    := $(NATIVE_PREBUILT)/libmicroinit.so
 
-BIGFRED_OCI_IMAGE ?= ghcr.io/dcc-bigfred/loco-server-android-arm64
-BIGFRED_OCI_TAG   ?= main
-MICROINIT_OCI_IMAGE ?= ghcr.io/dcc-bigfred/microinit-android-arm64
-MICROINIT_OCI_TAG   ?= main
-
-VALKEY_REPO      ?= dcc-bigfred/deps-android-valkey
+BIGFRED_REF    ?= master
+MICROINIT_REF  ?= main
+VALKEY_REPO    ?= dcc-bigfred/deps-android-valkey
 
 .PHONY: help apk release test test-android debug clean import-models \
 	loco-android valkey-android microinit-android native-prebuilt
@@ -39,21 +40,12 @@ VALKEY_REPO      ?= dcc-bigfred/deps-android-valkey
 help:
 	@echo "Targets:"
 	@echo "  make apk                 Build signed release APK → $(APK_RELEASE)"
-	@echo "  make release             Alias for apk"
-	@echo "  make test                Run JVM unit tests"
-	@echo "  make test-android        Run instrumented tests (device/emulator required)"
-	@echo "  make debug               Build debug APK → $(APK_DEBUG)"
-	@echo "  make import-models       Import hydrus models DB + thumbs → $(ASSETS_MODELS)"
-	@echo "  make loco-android        Fetch $(LOCO_SO) (local $(LOCAL_LOCO_BIN) if present, else $(BIGFRED_OCI_IMAGE):$(BIGFRED_OCI_TAG); FORCE=1)"
-	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release (skip if exists; FORCE=1)"
-	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from $(MICROINIT_OCI_IMAGE):$(MICROINIT_OCI_TAG) (skip if exists; FORCE=1)"
-	@echo "  make clean               Clean Gradle build outputs"
+	@echo "  make loco-android        Fetch $(LOCO_SO) (local bin or GitHub $(BIGFRED_REF))"
+	@echo "  make valkey-android      Fetch $(VALKEY_SO) from $(VALKEY_REPO) latest release"
+	@echo "  make microinit-android   Fetch $(MICROINIT_SO) from GitHub $(MICROINIT_REF)"
 	@echo ""
-	@echo "Release signing (optional; falls back to debug keystore):"
-	@echo "  BIGFRED_STORE_FILE / BIGFRED_STORE_PASSWORD"
-	@echo "  BIGFRED_KEY_ALIAS  / BIGFRED_KEY_PASSWORD"
-	@echo ""
-	@echo "Private GitHub deps (optional): GITHUB_TOKEN / GH_TOKEN / BIGFRED_NATIVE_TOKEN"
+	@echo "Tip refs need GITHUB_TOKEN / GH_TOKEN / BIGFRED_NATIVE_TOKEN"
+	@echo "Binary fetch: go run $(FETCH_PKG)"
 
 import-models:
 	$(PYTHON) "$(IMPORT_SCRIPT)" --out "$(IMPORT_OUT)"
@@ -62,11 +54,6 @@ import-models:
 	rm -rf "$(ASSETS_MODELS)/images"
 	cp -a "$(IMPORT_OUT)/images" "$(ASSETS_MODELS)/images"
 	@echo "Assets ready: $(ASSETS_MODELS)"
-	@ls -lh "$(ASSETS_MODELS)/models.db"
-	@echo "Images: $$(find "$(ASSETS_MODELS)/images" -type f | wc -l)"
-
-# --- Native prebuilts (download from deps-* GitHub Releases) -----------------
-# Thin Make rules: skip when the output exists. FORCE=1 removes first.
 
 ifdef FORCE
 .PHONY: force-clean-native
@@ -86,20 +73,50 @@ $(LOCO_SO): $(LOCAL_LOCO_BIN)
 	@echo "Using local $< → $@"
 else
 $(LOCO_SO):
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
 	@mkdir -p "$(NATIVE_PREBUILT)"
-	./scripts/fetch-ghcr-oras.sh "$(BIGFRED_OCI_IMAGE)" "$(BIGFRED_OCI_TAG)" "$@" main
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	go run "$(FETCH_PKG)" \
+		--repo=dcc-bigfred/bigfred \
+		--artifact=binaries \
+		--files=loco-server-android-arm64:bin/libloco-server.so \
+		"$(BIGFRED_REF)" "$$tmpdir/out.tar" && \
+	tar -xOf "$$tmpdir/out.tar" bin/libloco-server.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 endif
 
 valkey-android: $(VALKEY_SO)
 
 $(VALKEY_SO):
-	./scripts/fetch-github-release-asset.sh "$(VALKEY_REPO)" libvalkey-server.so "$@"
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
+	@mkdir -p "$(NATIVE_PREBUILT)"
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	go run "$(FETCH_PKG)" \
+		--repo="$(VALKEY_REPO)" \
+		--files=libvalkey-server.so:bin/libvalkey-server.so \
+		latest-release "$$tmpdir/out.tar" && \
+	tar -xOf "$$tmpdir/out.tar" bin/libvalkey-server.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 
 microinit-android: $(MICROINIT_SO)
 
 $(MICROINIT_SO):
+	@command -v go >/dev/null 2>&1 || { echo "error: go required for native fetch"; exit 1; }
 	@mkdir -p "$(NATIVE_PREBUILT)"
-	./scripts/fetch-ghcr-oras.sh "$(MICROINIT_OCI_IMAGE)" "$(MICROINIT_OCI_TAG)" "$@" main
+	@tmpdir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmpdir"' EXIT; \
+	go run "$(FETCH_PKG)" \
+		--repo=dcc-bigfred/microinit \
+		--artifact=binaries-android-arm64 \
+		--files=libmicroinit.so:bin/libmicroinit.so \
+		"$(MICROINIT_REF)" "$$tmpdir/out.tar" && \
+	tar -xOf "$$tmpdir/out.tar" bin/libmicroinit.so > "$@"
+	@chmod 755 "$@"
+	@echo "Wrote $@"
 
 native-prebuilt: loco-android valkey-android microinit-android
 

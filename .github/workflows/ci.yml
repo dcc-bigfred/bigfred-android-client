@@ -80,21 +80,18 @@ jobs:
           echo "$BIGFRED_STORE_FILE_CONTENT" | base64 -d > "${RUNNER_TEMP}/bigfred-release.jks"
           echo "BIGFRED_STORE_FILE=${RUNNER_TEMP}/bigfred-release.jks" >> "$GITHUB_ENV"
 
-      - name: Set up ORAS
-        uses: oras-project/setup-oras@v1
-
       - name: Fetch native prebuilts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BIGFRED_OCI_TAG: ${{ vars.BIGFRED_OCI_TAG }}
-          MICROINIT_OCI_TAG: ${{ vars.MICROINIT_OCI_TAG }}
+          BIGFRED_REF: ${{ vars.BIGFRED_REF }}
+          MICROINIT_REF: ${{ vars.MICROINIT_REF }}
         run: |
           set -euo pipefail
-          LOCO_TAG="${BIGFRED_OCI_TAG:-main}"
-          MICROINIT_TAG="${MICROINIT_OCI_TAG:-main}"
-          echo "Using loco-server OCI tag: ${LOCO_TAG}"
-          echo "Using microinit OCI tag: ${MICROINIT_TAG}"
-          make native-prebuilt BIGFRED_OCI_TAG="${LOCO_TAG}" MICROINIT_OCI_TAG="${MICROINIT_TAG}"
+          LOCO_REF="${BIGFRED_REF:-master}"
+          MICROINIT_REF="${MICROINIT_REF:-main}"
+          echo "Using loco-server ref: ${LOCO_REF}"
+          echo "Using microinit ref: ${MICROINIT_REF}"
+          make native-prebuilt BIGFRED_REF="${LOCO_REF}" MICROINIT_REF="${MICROINIT_REF}"
           ls -lh native-prebuilt/arm64-v8a/
 
       - name: Resolve app version
